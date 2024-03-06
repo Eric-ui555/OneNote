@@ -1,3 +1,57 @@
+# 数组
+
+## 121 买卖股票的最佳时机
+
+[121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/)
+
+**题目描述**
+
+给定一个数组 `prices` ，它的第 `i` 个元素 `prices[i]` 表示一支给定股票第 `i` 天的价格。
+
+你只能选择 **某一天** 买入这只股票，并选择在 **未来的某一个不同的日子** 卖出该股票。设计一个算法来计算你所能获取的最大利润。
+
+返回你可以从这笔交易中获取的最大利润。如果你不能获取任何利润，返回 `0` 。
+
+**示例**
+
+> 输入：[7,1,5,3,6,4]
+> 输出：5
+> 解释：在第 2 天（股票价格 = 1）的时候买入，在第 5 天（股票价格 = 6）的时候卖出，最大利润 = 6-1 = 5 。
+>      注意利润不能是 7-1 = 6, 因为卖出价格需要大于买入价格；同时，你不能在买入前卖出股票。
+
+> 输入：prices = [7,6,4,3,1]
+> 输出：0
+> 解释：在这种情况下, 没有交易完成, 所以最大利润为 0。
+
+**解题思路**
+
+需要找出给定数组中两个数字之间的最大差值（即，最大利润）。此外，第二个数字（卖出价格）必须大于第一个数字（买入价格）
+
+一次遍历
+
+- 时间复杂度：O(n)，只需要遍历一次。
+- 空间复杂度：O(1)，只使用了常数个变量。
+
+**参考代码**
+
+```java
+public int maxProfit(int prices[]) {
+    // 历史中的最小值
+    int minprice = Integer.MAX_VALUE;
+    int maxprofit = 0;
+    for (int i = 0; i < prices.length; i++) {
+        if (prices[i] < minprice) {
+            minprice = prices[i];
+        } else if (prices[i] - minprice > maxprofit) {
+            maxprofit = prices[i] - minprice;
+        }
+    }
+    return maxprofit;
+}
+```
+
+------
+
 ------
 
 # 字符串
@@ -20,8 +74,9 @@
 
 > 输入：s = "the sky is blue"  输出："blue is sky the"
 >
+
 > 输入：s = "  hello world  "  输出："world hello"  解释：反转后的字符串中不能存在前导空格和尾随空格。
->
+
 > 输入：s = "a good   example"  输出："example good a"  解释：如果两个单词间有多余的空格，反转后的字符串需要将单词间的空格减少到仅有一个。
 
 **解题思路**
@@ -101,7 +156,10 @@ private void reverseEachWord(StringBuilder sb) {
         end = start + 1;
     }
 }
-public String reverseWords2(String s) {
+```
+
+```java
+public String reverseWords(String s) {
     s = s.trim();                                     // 删除首尾空格
     // i指向单词的首字母的前一个字符，j指向单词最后一个字符
     int j = s.length() - 1, i = j;
@@ -111,11 +169,101 @@ public String reverseWords2(String s) {
     // 跳过单词间空格，j 指向下个单词的尾字符
     while (i >= 0) {
         while (i >= 0 && s.charAt(i) != ' ') i--;     // 搜索首个空格
-        res.append(s, i + 1, j + 1).append(" ");  // 添加单词
+        res.append(s, i + 1, j + 1).append(" ");      // 添加单词
         while (i >= 0 && s.charAt(i) == ' ') i--;     // 跳过单词间空格
         j = i;                                        // j 指向下个单词的尾字符
     }
     return res.toString().trim();                     // 转化为字符串并返回
+}
+```
+
+## 28. 找出字符串中第一个匹配项的下标
+
+[28. 找出字符串中第一个匹配项的下标](https://leetcode.cn/problems/find-the-index-of-the-first-occurrence-in-a-string/)
+
+**题目描述**
+
+给你两个字符串 `haystack` 和 `needle` ，请你在 `haystack` 字符串中找出 `needle` 字符串的第一个匹配项的下标（下标从 0 开始）。如果 `needle` 不是 `haystack` 的一部分，则返回 `-1` ****。
+
+**示例**
+
+> 示例 1：输入：haystack = "sadbutsad", needle = "sad" 输出：0 解释："sad" 在下标 0 和 6 处匹配。 第一个匹配项的下标是 0 ，所以返回 0 。
+
+> 示例 2：输入：haystack = "leetcode", needle = "leeto" 输出：-1 解释："leeto" 没有在 "leetcode" 中出现，所以返回 -1 。
+
+**解题思路**
+
+KMP算法：字符串匹配问题
+
+前缀表：next数组表示，记录模式串与子串（文本串）不匹配的时候，模式串应该从哪里考试重新匹配，其值为**最长相等前后缀的长度**
+
+- **前缀是指不包含最后一个字符的所有以第一个字符开头的连续子串**。
+- **后缀是指不包含第一个字符的所有以最后一个字符结尾的连续子串**。
+
+字符串匹配过程：
+
+**参考代码**
+
+```Java
+public int strStr(String haystack, String needle) {
+    return kmp(haystack, needle);
+}
+
+/**
+ * KMP数组
+ *
+ * @param haystack 文本串
+ * @param needle   模式串
+ * @return 数组索引
+ */
+public int kmp(String haystack, String needle) {
+    // 边界条件
+    if (needle.isEmpty()) return 0;
+    int[] next = new int[needle.length()];
+    // 获取前缀表
+    getNext(next, needle);
+    // 记录模式串的索引
+    int j = 0;
+    // 遍历文本串，i记录模式串在文本串中匹配的最后一个字符索引
+    for (int i = 0; i < haystack.length(); i++) {
+        // 当前字符不一致
+        while (j > 0 && haystack.charAt(i) != needle.charAt(j)) {
+            j = next[j - 1];
+        }
+        // 当前字符一致
+        if (haystack.charAt(i) == needle.charAt(j)) {
+            j++;
+        }
+        // 模式串全部匹配
+        if (j == needle.length()) {
+            return (i - needle.length() + 1);
+        }
+    }
+    return -1;
+}
+
+/**
+ * 计算前缀表：最长相等前后缀的长度
+ *
+ * @param next   前缀表
+ * @param target 目标字符串
+ */
+public void getNext(int[] next, String target) {
+    // 初始化，i指向后缀末尾位置，j指向前缀末尾位置（代表i之前包括i子串的最长相等前后缀长度）
+    int j = 0;
+    next[0] = 0;
+    for (int i = 1; i < target.length(); i++) {  // 注意i从1开始
+        // 前后缀不相同，向前回退
+        while (j > 0 && target.charAt(i) != target.charAt(j)) {
+            j = next[j - 1];  // 向前回退
+        }
+        // 找到相同的前后缀
+        if (target.charAt(i) == target.charAt(j)) {
+            j++;
+        }
+        // 将j(前缀的长度)赋给next[i]
+        next[i] = j;
+    }
 }
 ```
 
@@ -915,6 +1063,191 @@ public void swap(int[] nums, int i, int j) {
     int temp = nums[i];
     nums[i] = nums[j];
     nums[j] = temp;
+}
+```
+
+------
+
+# 动态规划
+
+------
+
+## 122 买卖股票的最佳时机2
+
+[122. 买卖股票的最佳时机 II](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/)
+
+**题目描述**
+
+给你一个整数数组 `prices` ，其中 `prices[i]` 表示某支股票第 `i` 天的价格。
+
+在每一天，你可以决定是否购买和/或出售股票。你在任何时候 **最多** 只能持有 **一股** 股票。你也可以先购买，然后在 **同一天** 出售。
+
+返回 *你能获得的 **最大** 利润* 。
+
+**示例**
+
+> 输入：prices = [7,1,5,3,6,4]
+> 输出：7
+> 解释：在第 2 天（股票价格 = 1）的时候买入，在第 3 天（股票价格 = 5）的时候卖出, 这笔交易所能获得利润 = 5 - 1 = 4 。
+>      随后，在第 4 天（股票价格 = 3）的时候买入，在第 5 天（股票价格 = 6）的时候卖出, 这笔交易所能获得利润 = 6 - 3 = 3 。
+>      总利润为 4 + 3 = 7 。
+
+**解题思路**
+
+暴力解法：超时
+
+动态规划法
+
+1. 确定dp数组以及下标的含义
+   - `dp[i][0]` 表示第i天持有股票所得现金。
+   - `dp[i][1]` 表示第i天不持有股票所得最多现金
+2. 确定递推公式
+   - `dp[i][0] = Math.max(dp[i - 1][0], dp[i - 1][1] + prices[i]);`
+   - `dp[i][1] = Math.max(dp[i - 1][1], dp[i - 1][0] - prices[i]);` 
+3. dp数组如何初始化：`dp[0][0] = 0;` `dp[0][1] = -prices[0];`
+4. 确定遍历顺序
+5. 举例推导dp数组
+
+**参考代码**
+
+```java
+/**
+ * 优化空间
+ * 时间复杂度：O(n)
+*  空间复杂度：O(n)
+ */
+public int maxProfit(int[] prices) {
+    int len = prices.length;
+    if (len < 2) {
+        return 0;
+    }
+
+    // 0：持有现金，dp[i][0] 表示第i天持有股票所得现金
+    // 1：持有股票，dp[i][1] 表示第i天不持有股票所得最多现金
+    // 状态转移：0 → 1 → 0 → 1 → 0 → 1 → 0
+    int[][] dp = new int[len][2];
+
+    dp[0][0] = 0;
+    dp[0][1] = -prices[0];
+
+    for (int i = 1; i < len; i++) {
+        // 这两行调换顺序也是可以的
+        dp[i][0] = Math.max(dp[i - 1][0], dp[i - 1][1] + prices[i]);
+        dp[i][1] = Math.max(dp[i - 1][1], dp[i - 1][0] - prices[i]);
+    }
+    return dp[len - 1][0];
+}
+```
+
+```java
+/**
+ * 优化空间
+ * 时间复杂度：O(n)
+ *  空间复杂度：O(1)
+ */
+public int maxProfit2(int[] prices) {
+    int[] dp = new int[2];
+    // 0表示持有，1表示卖出
+    dp[0] = -prices[0];
+    dp[1] = 0;
+    for(int i = 1; i <= prices.length; i++){
+        // 前一天持有; 既然不限制交易次数，那么再次买股票时，要加上之前的收益
+        dp[0] = Math.max(dp[0], dp[1] - prices[i-1]);
+        // 前一天卖出; 或当天卖出，当天卖出，得先持有
+        dp[1] = Math.max(dp[1], dp[0] + prices[i-1]);
+    }
+    return dp[1];
+}
+```
+
+## 123 买卖股票的最佳时机3
+
+[123. 买卖股票的最佳时机 III](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iii/)
+
+**题目描述**
+
+给定一个数组，它的第 `i` 个元素是一支给定的股票在第 `i` 天的价格。
+
+设计一个算法来计算你所能获取的最大利润。你最多可以完成 **两笔** 交易。
+
+**注意：**你不能同时参与多笔交易（你必须在再次购买前出售掉之前的股票）。
+
+**示例**
+
+> 输入：prices = [3,3,5,0,0,3,1,4]
+> 输出：6
+> 解释：在第 4 天（股票价格 = 0）的时候买入，在第 6 天（股票价格 = 3）的时候卖出，这笔交易所能获得利润 = 3-0 = 3 。
+>      随后，在第 7 天（股票价格 = 1）的时候买入，在第 8 天 （股票价格 = 4）的时候卖出，这笔交易所能获得利润 = 4-1 = 3 。
+
+**解题思路**
+
+动态规划法
+
+1. 确定dp数组以及下标的含义
+   - `dp[i][j]`中 i表示第i天，j为 `[0 - 4]` 五个状态，`dp[i][j]`表示第i天状态j所剩最大现金。
+   - 五个状态分别是：没有操作 （其实我们也可以不设置这个状态）、第一次持有股票、第一次不持有股票、第二次持有股票、第二次不持有股票
+2. 确定递推公式
+   - 达到`dp[i][1]`状态，有两个具体操作：
+     - 操作一：第i天买入股票了，那么`dp[i][1] = dp[i-1][0] - prices[i]`
+     - 操作二：第i天没有操作，而是沿用前一天买入的状态，即：`dp[i][1] = dp[i - 1][1]`
+   - 其它同理
+3. dp数组如何初始化：`dp[0][0] = 0;` `dp[0][1] = -prices[0];`
+4. 确定遍历顺序
+   - 从递归公式其实已经可以看出，一定是从前向后遍历，因为dp[i]，依靠dp[i - 1]的数值。
+5. 举例推导dp数组
+
+**参考代码**
+
+```java
+public int maxProfit(int[] prices) {
+    int len = prices.length;
+    // 边界判断, 题目中 length >= 1, 所以可省去
+    if (prices.length == 0) return 0;
+
+   /*
+    * 定义 5 种状态:
+    * 0: 没有操作, 1: 第一次买入, 2: 第一次卖出, 3: 第二次买入, 4: 第二次卖出
+    */
+    int[][] dp = new int[len][5];
+    dp[0][1] = -prices[0];
+    // 初始化第二次买入的状态是确保 最后结果是最多两次买卖的最大利润
+    dp[0][3] = -prices[0];
+
+    for (int i = 1; i < len; i++) {
+        dp[i][1] = Math.max(dp[i - 1][1], -prices[i]);
+        dp[i][2] = Math.max(dp[i - 1][2], dp[i - 1][1] + prices[i]);
+        dp[i][3] = Math.max(dp[i - 1][3], dp[i - 1][2] - prices[i]);
+        dp[i][4] = Math.max(dp[i - 1][4], dp[i - 1][3] + prices[i]);
+    }
+
+    return dp[len - 1][4];
+}
+```
+
+```java
+/**
+ * 空间优化
+ */
+public int maxProfit(int[] prices) {
+    int[] dp = new int[4];
+    // 存储两次交易的状态就行了
+    // dp[0]代表第一次交易的买入
+    dp[0] = -prices[0];
+    // dp[1]代表第一次交易的卖出
+    dp[1] = 0;
+    // dp[2]代表第二次交易的买入
+    dp[2] = -prices[0];
+    // dp[3]代表第二次交易的卖出
+    dp[3] = 0;
+    for (int i = 1; i <= prices.length; i++) {
+        // 要么保持不变，要么没有就买，有了就卖
+        dp[0] = Math.max(dp[0], -prices[i - 1]);
+        dp[1] = Math.max(dp[1], dp[0] + prices[i - 1]);
+        // 这已经是第二次交易了，所以得加上前一次交易卖出去的收获
+        dp[2] = Math.max(dp[2], dp[1] - prices[i - 1]);
+        dp[3] = Math.max(dp[3], dp[2] + prices[i - 1]);
+    }
+    return dp[3];
 }
 ```
 
