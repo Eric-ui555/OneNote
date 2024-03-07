@@ -1070,6 +1070,18 @@ public void swap(int[] nums, int i, int j) {
 
 # 动态规划
 
+动态规划，英文：Dynamic Programming，简称DP，如果某一问题有很多重叠子问题，使用动态规划是最有效的。
+
+所以动态规划中每一个状态一定是由上一个状态推导出来的，**这一点就区分于贪心**，贪心没有状态推导，而是从局部直接选最优的;
+
+解题步骤：
+
+1. 确定dp数组（dp table）以及下标的含义
+2. 确定递推公式
+3. dp数组如何初始化
+4. 确定遍历顺序
+5. 举例推导dp数组
+
 ------
 
 ## 122 买卖股票的最佳时机2
@@ -1248,6 +1260,294 @@ public int maxProfit(int[] prices) {
         dp[3] = Math.max(dp[3], dp[2] + prices[i - 1]);
     }
     return dp[3];
+}
+```
+
+## 139 单词拆分
+
+[139. 单词拆分](https://leetcode.cn/problems/word-break/)
+
+**题目描述**
+
+给你一个字符串 `s` 和一个字符串列表 `wordDict` 作为字典。如果可以利用字典中出现的一个或多个单词拼接出 `s` 则返回 `true`。
+
+**注意：**不要求字典中出现的单词全部都使用，并且字典中的单词可以重复使用。
+
+**示例**
+
+> 输入: s = "leetcode", wordDict = ["leet", "code"]
+> 输出: true
+> 解释: 返回 true 因为 "leetcode" 可以由 "leet" 和 "code" 拼接成。
+
+> 输入: s = "applepenapple", wordDict = ["apple", "pen"]
+> 输出: true
+> 解释: 返回 true 因为 "applepenapple" 可以由 "apple" "pen" "apple" 拼接成。
+>      注意，你可以重复使用字典中的单词。
+
+> **提示：**
+>
+> - `1 <= s.length <= 300`
+> - `1 <= wordDict.length <= 1000`
+> - `1 <= wordDict[i].length <= 20`
+> - `s` 和 `wordDict[i]` 仅由小写英文字母组成
+> - `wordDict` 中的所有字符串 **互不相同**
+
+**解题思路**
+
+动态规划:
+
+1、确定dp数组以及下标的含义
+
+定义 `dp[i]`表示字符串 s 前 i个字符组成的字符串 `s[0..i−1]` 是否能被空格拆分成若干个字典中出现的单词
+
+2、确定递推公式
+
+`dp[i]=dp[j]&& check(s[j..i−1])`
+
+从前往后计算考虑转移方程，**每次转移的时候我们需要枚举包含位置 i−1 的最后一个单词，看它是否出现在字典中以及除去这部分的字符串是否合法即可**。
+
+公式化来说，我们需要枚举 `s[0..i−1]`中的分割点 j ，看 `s[0..j−1]` 组成的字符串 `s1` （默认 j=0 时 `s1`为空串）和 s[j..i−1] 组成的字符串 `s2`是否都合法，如果两个字符串均合法，那么按照定义 `s1` 和 `s2` 拼接成的字符串也同样合法。
+
+**时间复杂度：O(n^2)**
+
+**空间复杂度：O(n)**
+
+**参考代码**
+
+```java
+public boolean wordBreak(String s, List<String> wordDict) {
+    // 数组去重
+    Set<String> wordDictSet = new HashSet<>(wordDict);
+    // dp数组
+    boolean[] dp = new boolean[s.length() + 1];
+    // dp数组初始化
+    dp[0] = true;
+    // 遍历
+    for (int i = 1; i <= s.length(); i++) {
+        for (int j = 0; j < i; j++) {
+            if (dp[j] && wordDictSet.contains(s.substring(j, i))) {
+                dp[i] = true;
+                break;
+            }
+        }
+    }
+    return dp[s.length()];
+}
+```
+
+------
+
+## 746 使用最小花费爬楼梯
+
+[746. 使用最小花费爬楼梯](https://leetcode.cn/problems/min-cost-climbing-stairs/)
+
+**题目描述**
+
+给你一个整数数组 `cost` ，其中 `cost[i]` 是从楼梯第 `i` 个台阶向上爬需要支付的费用。一旦你支付此费用，即可选择向上爬一个或者两个台阶。
+
+你可以选择从下标为 `0` 或下标为 `1` 的台阶开始爬楼梯。
+
+请你计算并返回达到楼梯顶部的最低花费。
+
+**示例**
+
+> 输入：cost = [10,15,20]
+> 输出：15
+> 解释：你将从下标为 1 的台阶开始。支付 15 ，向上爬两个台阶，到达楼梯顶部。总花费为 15 。
+
+> 输入：cost = [1,100,1,1,1,100,1,1,100,1]
+> 输出：6
+> 解释：你将从下标为 0 的台阶开始。
+> - 支付 1 ，向上爬两个台阶，到达下标为 2 的台阶。
+> - 支付 1 ，向上爬两个台阶，到达下标为 4 的台阶。
+> - 支付 1 ，向上爬两个台阶，到达下标为 6 的台阶。
+> - 支付 1 ，向上爬一个台阶，到达下标为 7 的台阶。
+> - 支付 1 ，向上爬两个台阶，到达下标为 9 的台阶。
+> - 支付 1 ，向上爬一个台阶，到达楼梯顶部。
+> 总花费为 6 。
+
+**解题思路**
+
+定义dp数组：dp[i] 的值为登上第i阶阶梯所要支付的代价；
+
+`dp[i] = min{dp[i-i]+cost[i-1], dp[i-2]+cost[i-2]}`
+
+`dp[0] = dp[1] = 0`
+
+**参考代码**
+
+```java
+/**
+* 时间复杂度：O(n)
+* 空间复杂度：O(n)
+*/
+public static int minCostClimbingStairs(int[] cost) {
+    int[] dp = new int[cost.length + 1];
+    dp[0] = 0;
+    dp[1] = 0;
+    for (int i = 2; i <= cost.length; i++) {
+        dp[i] = Math.min(dp[i - 1] + cost[i - 1], dp[i - 2] + cost[i - 2]);
+    }
+    System.out.println(Arrays.toString(dp));
+    return dp[cost.length];
+}
+
+/**
+* 时间复杂度：O(n)
+* 空间复杂度：O(1)
+*/
+public static int minCostClimbingStairs2(int[] cost) {
+    int pre = 0, cur = 0;
+    for (int i = 2; i <= cost.length; i++) {
+        int next = Math.min(cur + cost[i - 1], pre + cost[i - 2]);
+        pre = cur;
+        cur = next;
+    }
+    return cur;
+}
+```
+
+------
+
+## 322 零钱兑换
+
+[322. 零钱兑换](https://leetcode.cn/problems/coin-change/)
+
+**题目描述**
+
+给你一个整数数组 `coins` ，表示不同面额的硬币；以及一个整数 `amount` ，表示总金额。
+
+计算并返回可以凑成总金额所需的 **最少的硬币个数** 。如果没有任何一种硬币组合能组成总金额，返回 `-1` 。
+
+你可以认为每种硬币的数量是无限的。
+
+**示例**
+
+> 输入：coins = [1, 2, 5], amount = 11
+> 输出：3 
+> 解释：11 = 5 + 5 + 1
+
+> 输入：coins = [2], amount = 3
+> 输出：-1
+
+> 输入：coins = [1], amount = 0
+> 输出：0
+
+> **提示：**
+>
+> - `1 <= coins.length <= 12`
+> - `1 <= coins[i] <= 2^31 - 1`
+> - `0 <= amount <= 104`
+
+**解题思路**
+
+1、确定dp数组以及下标的含义
+
+dp[i]：表示
+
+**总结**
+
+1、确定dp数组以及下标的含义：dp[j]：凑成总金额j的货币组合数为dp[j]
+
+2、确定递推公式：`dp[j] = Math.min(dp[i], dp[i - coins[j]] + 1);;`
+
+3、dp数组如何初始化：`dp[0]=1`
+
+4、确定遍历顺序
+
+**参考代码**
+
+```java
+public class Solution {
+    public int coinChange(int[] coins, int amount) {
+        int max = amount + 1;
+        int[] dp = new int[amount + 1];
+        Arrays.fill(dp, max);
+        dp[0] = 0;
+        for (int i = 1; i <= amount; i++) {
+            for (int j = 0; j < coins.length; j++) {
+                if (coins[j] <= i) {
+                    dp[i] = Math.min(dp[i], dp[i - coins[j]] + 1);
+                }
+            }
+        }
+        return dp[amount] > amount ? -1 : dp[amount];
+    }
+}
+```
+
+## 62 不同路径
+
+[62. 不同路径](https://leetcode.cn/problems/unique-paths/)
+
+**题目描述**
+
+一个机器人位于一个 `m x n` 网格的左上角 （起始点在下图中标记为 “Start” ）。
+
+机器人每次只能向下或者向右移动一步。机器人试图达到网格的右下角（在下图中标记为 “Finish” ）。
+
+问总共有多少条不同的路径？
+
+**示例**
+
+> 输入：m = 3, n = 7
+> 输出：28
+
+> 输入：m = 3, n = 2
+> 输出：3
+> 解释：
+> 从左上角开始，总共有 3 条路径可以到达右下角。
+> 1. 向右 -> 向下 -> 向下
+> 2. 向下 -> 向下 -> 向右
+> 3. 向下 -> 向右 -> 向下
+
+**解题思路**
+
+树的深度优先遍历：
+
+- 由于机器人只能向下或向右，可以根据其方向画出一棵树
+- 会超出时间限制
+
+动态规划
+
+- `dp[i][j]`表示到行号为i，列号为j是的路径数量；
+
+- 递推方程：`dp[i][j] = dp[i - 1][j] + dp[i][j - 1];`
+- 初始化：要对第一行和第一列进行初始化，初始值都为1
+- 遍历：先遍历行在遍历列或相反；
+- 时间复杂度和空间复杂度：O(m*n)
+
+**参考代码**
+
+```java
+/**
+ * 深度优先遍历：超出时间限制
+ */
+public int uniquePaths(int m, int n) {
+    return traversal(1, 1, m, n);
+}
+
+public int traversal(int i, int j, int m, int n) {
+    if (i > m || j > n) return 0;
+    if (i == m && j == n) return 1;
+    return traversal(i + 1, j, m, n) + traversal(i, j + 1, m, n);
+}
+```
+
+```java
+/**
+ * 动态规划算法
+ */
+public static int uniquePaths2(int m, int n) {
+    int[][] dp = new int[m][n];
+    for (int i = 0; i < m; i++) dp[i][0] = 1;
+    for (int j = 0; j < n; j++) dp[0][j] = 1;
+    for (int i = 1; i < m; i++) {
+        for (int j = 1; j < n; j++) {
+            dp[i][j] = dp[i - 1][j] + dp[i][j - 1];
+        }
+    }
+    return dp[m - 1][n - 1];
 }
 ```
 
