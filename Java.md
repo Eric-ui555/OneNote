@@ -1,3 +1,541 @@
+# JavaSE
+
+## IO流
+
+定义：**存储和读取数据的解决方案**
+
+作用：用于读写数据（本地文件和网络）
+
+分类：
+
+- 根据数据流向分类：
+  - 输入流（文件->程序）
+  - 输出流（程序->文件）
+- 根据操作文件类型分类：
+  - 字节流：可以操作所有类型的文件
+  - 字符流：只能操作纯文本文件
+
+### 体系结构
+
+#### 1、文件IO流
+
+- 字节输入流：`InputStream`
+
+  - `FileIutputStream`：操作本地文件的字节输入流
+
+  - ```java
+    // 1. 创建字节输入流对象
+    // 如果文件不存在，就直接报错
+    FileInputStream inputStream = new FileInputStream(new File("a.txt"));
+    // 2. 读数据
+    // 一次都一个字节，读出来的是数据在ASCII上对应的数字
+    // 读到文件末尾了，read方法返回-1
+    int read = inputStream.read();
+    System.out.println(read);
+    // 3。释放资源
+    // 注意：每次使用完流之后都要释放资源
+    inputStream.close();
+    ```
+
+- 字节输出流：`OutputStream`
+
+  - `FileOutputStream`：操作本地文件的字节输出流
+
+  - ```java
+    // 1. 创建字节输出流对象
+    // 注意1：参数是字符串表示的路径或者File对象都是可以的
+    // 注意2：如果文件不存在会创建一个新的文件，但是要保证父级路径是存在的
+    // 注意3：如果文件已经存在，则会清空文件
+    FileOutputStream outputStream = new FileOutputStream("a.txt");
+    // 2. 写数据
+    // 注意：write方法的参数是证书，但是实际上写到本地文件中的是证书在ASCII上对应的字符
+    outputStream.write(97);
+    // 3。释放资源
+    // 注意：每次使用完流之后都要释放资源
+    outputStream.close();
+    ```
+
+  - 换行符：windows：`\r\n`，linux：`\n`，mac：`\r`
+
+  - 续写：打开续写开关：`FileOutputStream(String name, boolean append)`
+
+#### 2、管道IO流
+
+- `PipedInputStream`（字节输入流）
+- `PipedOutputStream`（字节输出流）
+- `PipedReader`（字符输入流）
+- `PipedWriter`（字符输出流）
+
+#### 3、字节/字符数组
+
+- 字节数组输入流：`ByteArrayInputStream`
+
+- 字节数组输出流：`ByteArrayOutputStream`
+
+- 字符数组输入流：`CharArrayReader`
+
+- 字符数组输出流：`CharArrayWriter`
+
+#### 4、**Buffered 缓冲流**
+
+**字节缓冲流**
+
+IO 操作是很消耗性能的，缓冲流将数据加载至缓冲区，一次性读取/写入多个字节，从而避免频繁的 IO 操作，提高流的传输效率。字节缓冲流这里采用了**装饰器模式**来增强 `InputStream` 和`OutputStream`子类对象的功能。
+
+- `BufferedInputStream`：从源头（通常是文件）读取数据（字节信息）到内存的过程中不会一个字节一个字节的读取，而是会先将读取到的字节存放在缓存区，并从内部缓冲区中单独读取字节。这样大幅减少了 IO 次数，提高了读取效率。
+
+  ```java
+  // 新建一个 BufferedInputStream 对象
+  BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream("input.txt"));
+  // 读取文件的内容并复制到 String 对象中
+  String result = new String(bufferedInputStream.readAllBytes());
+  System.out.println(result);
+  ```
+
+  字节流和字节缓冲流的性能差别主要体现在我们使用两者的时候都是调用 `write(int b)` 和 `read()` 这两个一次只读取一个字节的方法的时候。由于字节缓冲流内部有缓冲区（字节数组），因此，字节缓冲流会先将读取到的字节存放在缓存区，大幅减少 IO 次数，提高读取效率。
+
+  缓冲区源码：
+
+  ```java
+  public
+  class BufferedInputStream extends FilterInputStream {
+      // 内部缓冲区数组
+      protected volatile byte buf[];
+      // 缓冲区的默认大小
+      private static int DEFAULT_BUFFER_SIZE = 8192;
+      // 使用默认的缓冲区大小
+      public BufferedInputStream(InputStream in) {
+          this(in, DEFAULT_BUFFER_SIZE);
+      }
+      // 自定义缓冲区大小
+      public BufferedInputStream(InputStream in, int size) {
+          super(in);
+          if (size <= 0) {
+              throw new IllegalArgumentException("Buffer size <= 0");
+          }
+          buf = new byte[size];
+      }
+  }
+  ```
+
+- `BufferedOutputStream`：将数据（字节信息）写入到目的地（通常是文件）的过程中不会一个字节一个字节的写入，而是会先将要写入的字节存放在缓存区，并从内部缓冲区中单独写入字节。这样大幅减少了 IO 次数，提高了读取效率
+
+  ```java
+  FileOutputStream fileOutputStream = new FileOutputStream("output.txt");
+  BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream)
+  ```
+
+**字符缓冲流**
+
+- `BufferedReader`
+- `BufferedWriter`
+
+#### 5、**字节转化成字符流**
+
+- `InputStreamReader`：是字节流转换为字符流的桥梁，其子类 `FileReader` 是基于该基础上的封装，可以直接操作字符文件。
+
+  ```java
+  // 字节流转换为字符流的桥梁
+  public class InputStreamReader extends Reader {
+  }
+  // 用于读取字符文件
+  public class FileReader extends InputStreamReader {
+  }
+  ```
+
+  `FileReader` 代码示例：
+
+  ```java
+  try (FileReader fileReader = new FileReader("input.txt");) {
+      int content;
+      long skip = fileReader.skip(3);
+      System.out.println("The actual number of bytes skipped:" + skip);
+      System.out.print("The content read from file:");
+      while ((content = fileReader.read()) != -1) {
+          System.out.print((char) content);
+      }
+  } catch (IOException e) {
+      e.printStackTrace();
+  }
+  ```
+
+- `OutputStreamWriter`：是字符流转换为字节流的桥梁，其子类 `FileWriter` 是基于该基础上的封装，可以直接将字符写入到文件。
+
+  ```java
+  // 字符流转换为字节流的桥梁
+  public class OutputStreamWriter extends Writer {
+  }
+  // 用于写入字符到文件
+  public class FileWriter extends OutputStreamWriter {
+  }
+  ```
+
+  ```java
+  // 字符流转换为字节流的桥梁
+  public class OutputStreamWriter extends Writer {
+  }
+  // 用于写入字符到文件
+  public class FileWriter extends OutputStreamWriter {
+  }
+  ```
+
+  `FileWriter` 代码示例：
+
+  ```java
+  try (Writer output = new FileWriter("output.txt")) {
+      output.write("你好，我是Guide。");
+  } catch (IOException e) {
+      e.printStackTrace();
+  }
+  ```
+
+#### 6、**数据流**
+
+- `DataInputStream：`： 用于读取指定类型数据，不能单独使用，必须结合其它流，比如 `FileInputStream` 
+
+  ```java
+  FileInputStream fileInputStream = new FileInputStream("input.txt");
+  //必须将fileInputStream作为构造参数才能使用
+  DataInputStream dataInputStream = new DataInputStream(fileInputStream);
+  //可以读取任意具体的类型数据
+  dataInputStream.readBoolean();
+  dataInputStream.readInt();
+  dataInputStream.readUTF();
+  ```
+
+- `DataOutputStream`：用于写入指定类型数据，不能单独使用，必须结合其它流，比如 `FileOutputStream` 
+
+  ```java
+  // 输出流
+  FileOutputStream fileOutputStream = new FileOutputStream("out.txt");
+  DataOutputStream dataOutputStream = new DataOutputStream(fileOutputStream);
+  // 输出任意数据类型
+  dataOutputStream.writeBoolean(true);
+  dataOutputStream.writeByte(1);
+  ```
+
+#### 7、**打印流**
+
+- `PrintStream`
+  - `System.out` 实际是用于获取一个 `PrintStream` 对象，`print`方法实际调用的是 `PrintStream` 对象的 `write` 方法。
+  - `PrintStream` 是 `OutputStream` 的子类
+- `PrintWriter`
+- - `PrintWriter` 是 `Writer` 的子类。
+
+```java
+public class PrintStream extends FilterOutputStream
+    implements Appendable, Closeable {
+}
+public class PrintWriter extends Writer {
+}
+```
+
+#### 8、**对象流**
+
+- `ObjectInputStream`：用于从输入流中读取 Java 对象（反序列化）
+
+```java
+ObjectInputStream input = new ObjectInputStream(new FileInputStream("object.data"));
+MyClass object = (MyClass) input.readObject();
+input.close();
+```
+
+- `ObjectOutputStream`：用于将对象写入到输出流(序列化)
+
+```java
+ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream("file.txt")
+Person person = new Person("Guide哥", "JavaGuide作者");
+output.writeObject(person);
+```
+
+#### 9、**序列化流**
+
+- `SequenceInputStream`
+
+> **那为什么 I/O 流操作要分为字节流操作和字符流操作呢？**
+>
+> - 字符流是由 Java 虚拟机将字节转换得到的，这个过程还算是比较耗时。
+> - 如果我们不知道编码类型就很容易出现乱码问题。
+
+### 字符集
+
+在计算机中，，任意数据都是以二进制的形式
+
+**计算机存储规则**
+
+`ASCII`：一个英文占一个字节
+
+`GB2312字符集`：1980年发布，1981年5月1日实施的简体中文汉字编码国家标准
+
+- 收录7447个图形字符，其中包括6763个简体汉字
+
+`BIG5字符集`：台湾地区繁体中文标准字符集，共收录13053个中文字，1984年实施
+
+`GBK字符集`：2000年3月17日发布，收录21003个汉字
+
+- 包含国际标准`GB13000-1`中的全部中日韩汉字，和BIG5字符集的所有汉字
+- windows系统默认使用的`GBK`，系统显示`ANSI`
+- 英文：一个字节存储，完全兼容ASCII，二进制前面补0
+- 汉字：汉字两个字节存储，高位字节二进制一定以1开头，转成十进制之后是一个负数
+
+`Unicode字符集`：国际标准字符集，它将世界各种语言的每个字符定义一个唯一的编码，以满足跨语言、跨平台的文本信息转换
+
+- **UTF-16编码规则**：用2-4个字节保存
+- **UTF-32编码规则**：固定使用四个字节保存
+- **UTF-8编码规则**：用1-4个字节保存
+  - **英文字母：1个字节**，二进制的第一位是0，转成十进制是正数
+  - **中文汉字：3个字节**，二进制的第一位是1，第一个字节转成十进制是父数
+
+> 为什么会有乱码？
+
+- 读取数字时未读完整个汉字
+- 编码和解码的规则不一致
+
+### IO 设计模式
+
+#### 装饰器（Decorator）模式
+
+**装饰器（Decorator）模式** 可以在不改变原有对象的情况下拓展其功能。
+
+装饰器模式通过组合替代继承来扩展原始类的功能，在一些继承关系比较复杂的场景（IO 这一场景各种类的继承关系就比较复杂）更加实用。
+
+对于字节流来说， `FilterInputStream` （对应输入流）和`FilterOutputStream`（对应输出流）是装饰器模式的核心，分别用于增强 `InputStream` 和`OutputStream`子类对象的功能。
+
+我们常见的`BufferedInputStream`(字节缓冲输入流)、`DataInputStream` 等等都是`FilterInputStream` 的子类，`BufferedOutputStream`（字节缓冲输出流）、`DataOutputStream`等等都是`FilterOutputStream`的子类。
+
+装饰器类需要跟原始类继承相同的抽象类或者实现相同的接口。上面介绍到的这些 IO 相关的装饰类和原始类共同的父类是 `InputStream` 和`OutputStream`。
+
+#### 适配器模式
+
+**适配器（Adapter Pattern）模式** 主要用于接口互不兼容的类的协调工作，你可以将其联想到我们日常经常使用的电源适配器。
+
+适配器模式中存在被适配的对象或者类称为 **适配者(Adaptee)** ，作用于适配者的对象或者类称为**适配器(Adapter)** 。适配器分为对象适配器和类适配器。类适配器使用继承关系来实现，对象适配器使用组合关系来实现。
+
+IO 流中的字符流和字节流的接口不同，它们之间可以协调工作就是基于适配器模式来做的，更准确点来说是对象适配器。通过适配器，我们可以将字节流对象适配成一个字符流对象，这样我们可以直接通过字节流对象来读取或者写入字符数据。
+
+`InputStreamReader` 和 `OutputStreamWriter` 就是两个适配器(Adapter)， 同时，它们两个也是字节流和字符流之间的桥梁。`InputStreamReader` 使用 `StreamDecoder` （流解码器）对字节进行解码，**实现字节流到字符流的转换，** `OutputStreamWriter` 使用`StreamEncoder`（流编码器）对字符进行编码，实现字符流到字节流的转换。
+
+`InputStream` 和 `OutputStream` 的子类是被适配者， `InputStreamReader` 和 `OutputStreamWriter`是适配器。
+
+```java
+// InputStreamReader 是适配器，FileInputStream 是被适配的类
+InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
+// BufferedReader 增强 InputStreamReader 的功能（装饰器模式）
+BufferedReader bufferedReader = new BufferedReader(isr);
+```
+
+`java.io.InputStreamReader` 部分源码：
+
+```java
+public class InputStreamReader extends Reader {
+    //用于解码的对象
+    private final StreamDecoder sd;
+    public InputStreamReader(InputStream in) {
+        super(in);
+        try {
+            // 获取 StreamDecoder 对象
+            sd = StreamDecoder.forInputStreamReader(in, this, (String)null);
+        } catch (UnsupportedEncodingException e) {
+            throw new Error(e);
+        }
+    }
+    // 使用 StreamDecoder 对象做具体的读取工作
+    public int read() throws IOException {
+        return sd.read();
+    }
+}
+```
+
+`java.io.OutputStreamWriter` 部分源码：
+
+```java
+public class OutputStreamWriter extends Writer {
+    // 用于编码的对象
+    private final StreamEncoder se;
+    public OutputStreamWriter(OutputStream out) {
+        super(out);
+        try {
+           // 获取 StreamEncoder 对象
+            se = StreamEncoder.forOutputStreamWriter(out, this, (String)null);
+        } catch (UnsupportedEncodingException e) {
+            throw new Error(e);
+        }
+    }
+    // 使用 StreamEncoder 对象做具体的写入工作
+    public void write(int c) throws IOException {
+        se.write(c);
+    }
+}
+```
+
+**适配器模式和装饰器模式有什么区别呢？**
+
+**装饰器模式** 更侧重于**动态地增强原始类的功能**，装饰器类需要跟原始类继承相同的抽象类或者实现相同的接口。并且，装饰器模式支持对原始类嵌套使用多个装饰器。
+
+**适配器模式** 更侧重于**让接口不兼容而不能交互的类可以一起工作**，当我们调用适配器对应的方法时，适配器内部会调用适配者类或者和适配类相关的类的方法，这个过程透明的。就比如说 `StreamDecoder` （流解码器）和`StreamEncoder`（流编码器）就是分别基于 `InputStream` 和 `OutputStream` 来获取 `FileChannel`对象并调用对应的 `read` 方法和 `write` 方法进行字节数据的读取和写入。
+
+```java
+StreamDecoder(InputStream in, Object lock, CharsetDecoder dec) {
+    // 省略大部分代码
+    // 根据 InputStream 对象获取 FileChannel 对象
+    ch = getChannel((FileInputStream)in);
+}
+```
+
+适配器和适配者两者不需要继承相同的抽象类或者实现相同的接口。
+
+另外，`FutureTask` 类使用了适配器模式，`Executors` 的内部类 `RunnableAdapter` 实现属于适配器，用于将 `Runnable` 适配成 `Callable`。
+
+`FutureTask`参数包含 `Runnable` 的一个构造方法。
+
+```java
+public FutureTask(Runnable runnable, V result) {
+    // 调用 Executors 类的 callable 方法
+    this.callable = Executors.callable(runnable, result);
+    this.state = NEW;
+}
+```
+
+`Executors`中对应的方法和适配器：
+
+```java
+// 实际调用的是 Executors 的内部类 RunnableAdapter 的构造方法
+public static <T> Callable<T> callable(Runnable task, T result) {
+    if (task == null)
+        throw new NullPointerException();
+    return new RunnableAdapter<T>(task, result);
+}
+// 适配器
+static final class RunnableAdapter<T> implements Callable<T> {
+    final Runnable task;
+    final T result;
+    RunnableAdapter(Runnable task, T result) {
+        this.task = task;
+        this.result = result;
+    }
+    public T call() {
+        task.run();
+        return result;
+    }
+}
+```
+
+#### 工厂模式
+
+工厂模式用于创建对象，NIO 中大量用到了工厂模式，比如 `Files` 类的 `newInputStream` 方法用于创建 `InputStream` 对象（静态工厂）、 `Paths` 类的 `get` 方法创建 `Path` 对象（静态工厂）、`ZipFileSystem` 类（`sun.nio`包下的类，属于 `java.nio` 相关的一些内部实现）的 `getPath` 的方法创建 `Path` 对象（简单工厂）
+
+```java
+InputStream is = Files.newInputStream(Paths.get(generatorLogoPath))
+```
+
+#### 观测者模式
+
+NIO 中的文件目录监听服务使用到了观察者模式。
+
+NIO 中的文件目录监听服务基于 `WatchService` 接口和 `Watchable` 接口。`WatchService` 属于观察者，`Watchable` 属于被观察者。
+
+`Watchable` 接口定义了一个用于将对象注册到 `WatchService`（监控服务） 并绑定监听事件的方法 `register` 。
+
+```java
+public interface Path
+    extends Comparable<Path>, Iterable<Path>, Watchable{
+}
+
+public interface Watchable {
+    WatchKey register(WatchService watcher,
+                      WatchEvent.Kind<?>[] events,
+                      WatchEvent.Modifier... modifiers)
+        throws IOException;
+}
+```
+
+`WatchService` 用于监听文件目录的变化，同一个 `WatchService` 对象能够监听多个文件目录。
+
+```java
+// 创建 WatchService 对象
+WatchService watchService = FileSystems.getDefault().newWatchService();
+
+// 初始化一个被监控文件夹的 Path 类:
+Path path = Paths.get("workingDirectory");
+// 将这个 path 对象注册到 WatchService（监控服务） 中去
+WatchKey watchKey = path.register(
+watchService, StandardWatchEventKinds...);
+```
+
+`Path` 类 `register` 方法的第二个参数 `events` （需要监听的事件）为可变长参数，也就是说我们可以同时监听多种事件。
+
+```java
+WatchKey register(WatchService watcher,
+                  WatchEvent.Kind<?>... events)
+    throws IOException;
+```
+
+常用的监听事件有 3 种：
+
+- `StandardWatchEventKinds.ENTRY_CREATE`：文件创建。
+- `StandardWatchEventKinds.ENTRY_DELETE` : 文件删除。
+- `StandardWatchEventKinds.ENTRY_MODIFY` : 文件修改。
+
+`register` 方法返回 `WatchKey` 对象，通过`WatchKey` 对象可以获取事件的具体信息比如文件目录下是创建、删除还是修改了文件、创建、删除或者修改的文件的具体名称是什么
+
+```java
+WatchKey key;
+while ((key = watchService.take()) != null) {
+    for (WatchEvent<?> event : key.pollEvents()) {
+      // 可以调用 WatchEvent 对象的方法做一些事情比如输出事件的具体上下文信息
+    }
+    key.reset();
+}
+```
+
+`WatchService` 内部是通过一个 daemon thread（守护线程）采用定期轮询的方式来检测文件的变化，简化后的源码如下所示。
+
+```java
+class PollingWatchService
+    extends AbstractWatchService
+{
+    // 定义一个 daemon thread（守护线程）轮询检测文件变化
+    private final ScheduledExecutorService scheduledExecutor;
+
+    PollingWatchService() {
+        scheduledExecutor = Executors
+            .newSingleThreadScheduledExecutor(new ThreadFactory() {
+                 @Override
+                 public Thread newThread(Runnable r) {
+                     Thread t = new Thread(r);
+                     t.setDaemon(true);
+                     return t;
+                 }});
+    }
+
+  void enable(Set<? extends WatchEvent.Kind<?>> events, long period) {
+    synchronized (this) {
+      // 更新监听事件
+      this.events = events;
+
+        // 开启定期轮询
+      Runnable thunk = new Runnable() { public void run() { poll(); }};
+      this.poller = scheduledExecutor
+        .scheduleAtFixedRate(thunk, period, period, TimeUnit.SECONDS);
+    }
+  }
+}
+```
+
+### IO 设计模型
+
+------
+
+## 集合
+
+
+
+------
+
+## 多线程
+
+------
+
 # JVM
 
 ------
@@ -6,15 +544,15 @@
 
 ### 初识JVM
 
-JVM 本质上是一个运行在计算机上的程序，他的职责是运行Java字节码文件。
+JVM 本质上是一个运行在计算机上的程序，他的职责是**运行Java字节码文件**。
 
 ![image-20240306164940469](Java.assets/image-20240306164940469.png)
 
 JVM的功能
 
-- 解释和运行：对字节码文件中的指令， 实时的解释成机器码， 让计算机执行
-- 内存管理：自动为对象、方法等分配内存；自动的垃圾回收机制， 回收不再使用的对象
-- 即时编译（**Just-In-Time 简称JIT**）：对热点代码进行优化， 提升执行效率
+- **解释和运行**：对字节码文件中的指令， 实时的解释成机器码， 让计算机执行
+- **内存管理**：自动为对象、方法等分配内存；自动的垃圾回收机制， 回收不再使用的对象
+- **即时编译**（**Just-In-Time 简称JIT**）：对热点代码进行优化， 提升执行效率
 
 常见的JVM
 
@@ -1191,10 +1729,344 @@ G1对老年代的清理会选择存活度最低的区域来进行回收，这样
 
 > 常见的垃圾回收器有哪些？
 
-| 垃圾回收器                              | 应用                                                 |
-| --------------------------------------- | ---------------------------------------------------- |
-| Serial和SerialOld组合关系               | 单线程，主要适用于单核CPU场景                        |
-| parNew和CMS组合关系                     | 暂停时间较短，适用于大型互联网应用中与用户交互的部分 |
-| Parallel Scavenge和Parallel Old组合关系 | 吞吐量高，适用于后台进行大量数据操作                 |
-| G1                                      | 暂停时间较短，适用于大型互联网应用中与用户交互的部分 |
+| 垃圾回收器                                  | 应用                                                 |
+| ------------------------------------------- | ---------------------------------------------------- |
+| `Serial`和`SerialOld`组合关系               | 单线程，主要适用于单核CPU场景                        |
+| `parNew`和`CMS`组合关系                     | 暂停时间较短，适用于大型互联网应用中与用户交互的部分 |
+| `Parallel Scavenge`和`Parallel Old`组合关系 | 吞吐量高，适用于后台进行大量数据操作                 |
+| `G1`                                        | 暂停时间较短，适用于大型互联网应用中与用户交互的部分 |
 
+------
+
+## 内存调优
+
+**内存泄漏（memory leak）**：在Java中如果不再使用一个对象，但是该对象依然在GC ROOT的引用链上， 这个对象就不会被垃圾回收器回收，这种情况就称之为内存泄漏。
+
+- 内存泄漏绝大多数情况都是由**堆内存**泄漏引起的，所以后续没有特别说明则讨论的都是堆内存泄漏。
+
+- 少量的内存泄漏可以容忍，但是如果发生持续的内存泄漏，就像滚雪球雪球越滚越大，不管有多大的内存迟早会被消耗完，最终导致的结果就是**内存溢出**。**但是产生内存溢出并不是只有内存泄漏这一种原因**。
+
+内存泄漏的常见场景
+
+- 大型Java后端应用中在处理用户的请求之后，没有及时将用户的数据删除。随着用户请求数量越来越多，内存泄漏的对象占满了堆内存最终导致内存溢出。
+- 分布式任务调度系统，如Elastic-job、Quartz等进行任务调度时，被调度的Java应用在 调度任务结束中出现了内存泄漏，最终导致多次调度之后内存溢出。
+
+**解决内存溢出的方法**
+
+- 1、发现问题：通过监控工具尽可能早地发 现内存慢慢变大的现象
+- 2、诊断原因：通过分析工具，诊断问题的产生原因，定位到出现问题的源代码
+- 3、修复问题：修复源代码中的问题
+- 4、测试验证：在测试化境验证问题解决，最后发布上线
+
+发现问题：**Top命令**
+
+- top命令是linux下用来查看系统信息的一个命令，它提供给我们去实时地 去查看系统的资源，比如执行时的进程、线程和系统参数等信息。
+- 进程使用的内存为RES（常驻内存）- SHR（共享内存）
+
+- 优点：操作简单，无需额外的软件安装
+- 缺点：只能查看最基础的进程信息，无 法查看到每个部分的内存占用 （堆、方法区、堆外）
+
+发现问题：**Visual VM**
+
+- VisualVM是多功能合一的Java故障排除工具并且他是一款可视化工具，整合了 命令行 JDK 工具和轻量级分析功能，功能非常强大。 
+- 这款软件在Oracle JDK 6~8 中发布，但是在 Oracle JDK 9 之后不在 JDK安装目录下需要单独下载。下载地址：https://visualvm.github.io/
+- 优点：功能丰富，实时监控CPU、 内存、线程等详细信息；支持Idea插件，开发过程中也可以使用
+- 缺点：对大量集群化部署的Java进程需要手动进行管理
+
+发现问题：**Arthas**
+
+- Arthas 是一款线上监控诊断产品，通过全局视角实时查看应用 load、内存、 gc、线程的状态信息，并能在不修改应用代码的情况下，对业务问题进行诊断， 包括查看方法调用的出入参、异常，监测方法执行耗时，类加载信息等，大大提升 线上问题排查效率。
+- 优点：功能强大，不止于监控基 础的信息，还能监控单个 方法的执行耗时等细节内容；支持应用的集群管理；
+- 缺点：部分高级功能使用门槛较高
+
+------
+
+# 设计模式
+
+------
+
+## 装饰器模式
+
+**装饰器（Decorator）模式** 可以在不改变原有对象的情况下拓展其功能。
+
+装饰器模式通过组合替代继承来扩展原始类的功能，在一些继承关系比较复杂的场景（IO 这一场景各种类的继承关系就比较复杂）更加实用。
+
+------
+
+## 代理模式
+
+定义：为其他对象提供一种代理以控制对这个对象的访问
+
+![img](Java.assets/v2-9ebf1cd2183e699d766ddf9b7296e1ed_1440w.webp)
+
+代理模式的通用类图。上图中，Subject是一个抽象类或者接口，`RealSubject`是实现方法类，具体的业务执行，`Proxy`则是`RealSubject`的代理，直接和client接触的。代理模式可以在不修改被代理对象的基础上，通过扩展代理类，进行一些功能的附加与增强。值得注意的是，代理类和被代理类应该共同实现一个接口，或者是共同继承某个类。
+
+代理模式优点
+
+- 职责清晰
+- 高扩展，只要实现了接口，都可以用代理。
+- 智能化，动态代理。
+
+### 1、静态代理
+
+以租房为例，我们一般用租房软件、找中介或者找房东。这里的中介就是代理者。
+
+首先定义一个提供了租房方法的接口。
+
+```java
+public interface IRentHouse {
+    void rentHouse();
+}
+```
+
+定义租房的实现类
+
+```java
+public class RentHouse implements IRentHouse {
+    @Override
+    public void rentHouse() {
+        System.out.println("租了一间房子。。。");
+    }
+}
+```
+
+我要租房，房源都在中介手中，所以找中介
+
+```java
+public class IntermediaryProxy implements IRentHouse {
+
+    private IRentHouse rentHouse;
+
+    public IntermediaryProxy(IRentHouse irentHouse){
+        rentHouse = irentHouse;
+    }
+
+    @Override
+    public void rentHouse() {
+        System.out.println("交中介费");
+        rentHouse.rentHouse();
+        System.out.println("中介负责维修管理");
+    }
+}
+```
+
+这里中介也实现了租房的接口。
+
+再main方法中测试
+
+```java
+public class Main {
+
+    public static void main(String[] args){
+        //定义租房
+        IRentHouse rentHouse = new RentHouse();
+        //定义中介
+        IRentHouse intermediary = new IntermediaryProxy(rentHouse);
+        //中介租房
+        intermediary.rentHouse();
+    }
+}
+```
+
+返回信息
+
+```
+交中介费
+租了一间房子。。。
+中介负责维修管理
+```
+
+这就是静态代理，因为中介这个代理类已经事先写好了，只负责代理租房业务
+
+### 2、强制代理
+
+如果我们直接找房东要租房，房东会说我把房子委托给中介了，你找中介去租吧。这样我们就又要交一部分中介费了，真坑。
+
+来看代码如何实现，定义一个租房接口，增加一个方法。
+
+```java
+public interface IRentHouse {
+    void rentHouse();
+    IRentHouse getProxy();
+}
+```
+
+这时中介的方法也稍微做一下修改
+
+```java
+public class IntermediaryProxy implements IRentHouse {
+
+    private IRentHouse rentHouse;
+
+    public IntermediaryProxy(IRentHouse irentHouse){
+        rentHouse = irentHouse;
+    }
+
+    @Override
+    public void rentHouse() {
+        rentHouse.rentHouse();
+    }
+
+    @Override
+    public IRentHouse getProxy() {
+        return this;
+    }
+}
+```
+
+其中的`getProxy()`方法返回中介的代理类对象
+
+我们再来看房东是如何实现租房：
+
+```java
+public class LandLord implements IRentHouse {
+
+    private IRentHouse iRentHouse = null;
+
+    @Override
+    public void rentHouse() {
+        if (isProxy()){
+            System.out.println("租了一间房子。。。");
+        }else {
+            System.out.println("请找中介");
+        }
+    }
+
+    @Override
+    public IRentHouse getProxy() {
+        iRentHouse = new IntermediaryProxy(this);
+        return iRentHouse;
+    }
+
+    /**
+     * 校验是否是代理访问
+     * @return
+     */
+    private boolean isProxy(){
+        if(this.iRentHouse == null){
+            return false;
+        }else{
+            return true;
+        }
+    }
+}
+```
+
+房东的`getProxy`方法返回的是代理类，然后判断租房方法的调用者是否是中介，不是中介就不租房。
+
+main方法测试：
+
+```java
+public static void main(String[] args){
+        IRentHouse iRentHosue = new LandLord();
+        //租客找房东租房
+        iRentHouse.rentHouse();
+        //找中介租房
+        IRentHouse rentHouse = iRentHouse.getProxy();
+        rentHouse.rentHouse();
+    }
+}
+```
+
+```
+请找中介
+租了一间房子。。
+```
+
+看，这样就是强制你使用代理，如果不是代理就没法访问。
+
+### 3、动态代理
+
+我们知道现在的中介不仅仅是有租房业务，同时还有卖房、家政、维修等得业务，只是我们就不能对每一个业务都增加一个代理，就要提供通用的代理方法，这就要通过动态代理来实现了。
+
+中介的代理方法做了一下修改
+
+```java
+public class IntermediaryProxy implements InvocationHandler {
+
+
+    private Object obj;
+
+    public IntermediaryProxy(Object object){
+        obj = object;
+    }
+
+    /**
+     * 调用被代理的方法
+     * @param proxy
+     * @param method
+     * @param args
+     * @return
+     * @throws Throwable
+     */
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        Object result = method.invoke(this.obj, args);
+        return result;
+    }
+
+}
+```
+
+在这里实现`InvocationHandler`接口，此接口是 `JDK` 提供的动态代理接口，对被代理的方法提供代理。其中`invoke`方法是接口`InvocationHandler`定义必须实现的， 它完成对真实方法的调用。动态代理是根据被代理的接口生成所有的方法，也就是说给定一个接口，动态代理就会实现接口下所有的方法。通过 `InvocationHandler`接口， 所有方法都由该`Handler`来进行处理， 即所有被代理的方法都由 `InvocationHandler`接管实际的处理任务。
+
+这里增加一个卖房的业务，代码和租房代码类似。
+
+main方法测试：
+
+```java
+public static void main(String[] args){
+
+    IRentHouse rentHouse = new RentHouse();
+    //定义一个handler
+    InvocationHandler handler = new IntermediaryProxy(rentHouse);
+    //获得类的class loader
+    ClassLoader cl = rentHouse.getClass().getClassLoader();
+    //动态产生一个代理者
+    IRentHouse proxy = (IRentHouse) Proxy.newProxyInstance(cl, new Class[]{IRentHouse.class}, handler);
+    proxy.rentHouse();
+
+    ISellHouse sellHouse = new SellHouse();
+    InvocationHandler handler1 = new IntermediaryProxy(sellHouse);
+    ClassLoader classLoader = sellHouse.getClass().getClassLoader();
+    ISellHouse proxy1 = (ISellHouse) Proxy.newProxyInstance(classLoader, new Class[]{ISellHouse.class}, handler1);
+    proxy1.sellHouse();
+
+}
+```
+
+```
+租了一间房子。。。
+买了一间房子。。。
+```
+
+在main方法中我们用到了Proxy这个类的方法，
+
+```java
+public static Object newProxyInstance(ClassLoader loader,
+                                          Class<?>[] interfaces,
+                                          InvocationHandler h)
+```
+
+`loader`：类加载器，interfaces：代码要用来代理的接口， h：一个 `InvocationHandler` 对象 。
+
+`InvocationHandler` 是一个接口，每个代理的实例都有一个与之关联的 `InvocationHandler` 实现类，如果代理的方法被调用，那么代理便会通知和转发给内部的 `InvocationHandler` 实现类，由它决定处理。
+
+```java
+public interface InvocationHandler {
+
+    public Object invoke(Object proxy, Method method, Object[] args)
+        throws Throwable;
+}
+```
+
+`InvocationHandler` 内部只是一个 invoke() 方法，正是这个方法决定了怎么样处理代理传递过来的方法调用。
+
+因为，Proxy 动态产生的代理会调用 `InvocationHandler` 实现类，所以 `InvocationHandler` 是实际执行者。
+
+### 总结
+
+1. 静态代理，代理类需要自己编写代码写成。
+2. 动态代理，代理类通过 `Proxy.newInstance()` 方法生成。
+3. `JDK`实现的代理中不管是静态代理还是动态代理，代理与被代理者都要实现两样接口，它们的实质是面向接口编程。`CGLib`可以不需要接口。
+4. 动态代理通过 Proxy 动态生成 proxy class，但是它也指定了一个 `InvocationHandler` 的实现类。
