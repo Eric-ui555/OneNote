@@ -2,7 +2,11 @@
 
 ## IO流
 
-定义：**存储和读取数据的解决方案**
+根据冯.诺依曼结构，计算机结构分为 5 大部分：**运算器、控制器、存储器、输入设备、输出设备**。
+
+从计算机结构的视角来看： **I/O 描述了计算机系统与外部设备之间通信的过程。**
+
+IO流定义：**存储和读取数据的解决方案**
 
 作用：用于读写数据（本地文件和网络）
 
@@ -524,11 +528,57 @@ class PollingWatchService
 
 ### IO 设计模型
 
+UNIX 系统下， IO 模型一共有 5 种：**同步阻塞 I/O**、**同步非阻塞 I/O**、**I/O 多路复用**、**信号驱动 I/O** 和**异步 I/O**。
+
+Java中3种常见的IO模型：BIO（Blocking I/O）、NIO、AIO
+
+#### BIO(Blocking I/O)
+
+**`BIO` 属于同步阻塞 IO 模型** 。
+
+同步阻塞 IO 模型中，应用程序发起 read 调用后，会一直阻塞，直到内核把数据拷贝到用户空间。
+
+<img src="Java.assets/6a9e704af49b4380bb686f0c96d33b81tplv-k3u1fbpfcp-watermark.png" alt="图源：《深入拆解Tomcat & Jetty》" style="zoom: 50%;" />
+
+在客户端连接数量不高的情况下，是没问题的。但是，当面对十万甚至百万级连接的时候，传统的 BIO 模型是无能为力的。因此，我们需要一种更高效的 I/O 处理模型来应对更高的并发量。
+
+#### NIO(Non-blocking/New I/O)
+
+Java 中的 `NIO` 于 Java 1.4 中引入，对应 `java.nio` 包，提供了 `Channel` , `Selector`，`Buffer` 等抽象。
+
+`NIO` 中的 N 可以理解为 `Non-blocking`，不单纯是 New。它是支持面向缓冲的，基于通道的 I/O 操作方法。 对于高负载、高并发的（网络）应用，应使用 `NIO` 。
+
+Java 中的 `NIO` 可以看作是 **I/O 多路复用模型**。
+
+**1、同步非阻塞模型**
+
+<img src="Java.assets/bb174e22dbe04bb79fe3fc126aed0c61tplv-k3u1fbpfcp-watermark.png" alt="图源：《深入拆解Tomcat & Jetty》" style="zoom:50%;" />
+
+同步非阻塞 IO 模型中，应用程序会一直发起 read 调用，等待数据从内核空间拷贝到用户空间的这段时间里，线程依然是阻塞的，直到在内核把数据拷贝到用户空间。
+
+> 相较于BIO的优点：通过轮询操作，避免了一直阻塞
+>
+> 缺点：**应用程序不断进行 I/O 系统调用轮询数据是否已经准备好的过程是十分消耗 CPU 资源的。**
+
+**2、I/O多路复用模型**
+
+IO 多路复用模型中，线程首先发起 select 调用，询问内核数据是否准备就绪，等内核把数据准备好了，用户线程再发起 read 调用。read 调用的过程（数据从内核空间 -> 用户空间）还是阻塞的。
+
+**IO 多路复用模型，通过减少无效的系统调用，减少了对 CPU 资源的消耗。**
+
+<img src="Java.assets/88ff862764024c3b8567367df11df6abtplv-k3u1fbpfcp-watermark.png" alt="img" style="zoom:50%;" />
+
+### AIO(Asynchronous I/O)
+
+`AIO` 也就是 `NIO 2`。Java 7 中引入了 `NIO` 的改进版 `NIO 2`，它是异步 IO 模型。
+
+异步 IO 是基于事件和回调机制实现的，也就是应用操作之后会直接返回，不会堵塞在那里，当后台处理完成，操作系统会通知相应的线程进行后续的操作。
+
+<img src="Java.assets/3077e72a1af049559e81d18205b56fd7tplv-k3u1fbpfcp-watermark.png" alt="img" style="zoom:50%;" />
+
 ------
 
 ## 集合
-
-
 
 ------
 
