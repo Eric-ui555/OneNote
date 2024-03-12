@@ -21,47 +21,46 @@ IO流定义：**存储和读取数据的解决方案**
 
 ### 体系结构
 
+继承四个超类：`InputStream`、`OutputStream`、`Reader`、`Writer`
+
 #### 1、文件IO流
 
-- 字节输入流：`InputStream`
+- `FileIutputStream`：操作本地文件的字节输入流
 
-  - `FileIutputStream`：操作本地文件的字节输入流
+```java
+// 1. 创建字节输入流对象
+// 如果文件不存在，就直接报错
+FileInputStream inputStream = new FileInputStream(new File("a.txt"));
+// 2. 读数据
+// 一次都一个字节，读出来的是数据在ASCII上对应的数字
+// 读到文件末尾了，read方法返回-1
+int read = inputStream.read();
+System.out.println(read);
+// 3。释放资源
+// 注意：每次使用完流之后都要释放资源
+inputStream.close();
+```
 
-  - ```java
-    // 1. 创建字节输入流对象
-    // 如果文件不存在，就直接报错
-    FileInputStream inputStream = new FileInputStream(new File("a.txt"));
-    // 2. 读数据
-    // 一次都一个字节，读出来的是数据在ASCII上对应的数字
-    // 读到文件末尾了，read方法返回-1
-    int read = inputStream.read();
-    System.out.println(read);
-    // 3。释放资源
-    // 注意：每次使用完流之后都要释放资源
-    inputStream.close();
-    ```
+- `FileOutputStream`：操作本地文件的字节输出流
 
-- 字节输出流：`OutputStream`
 
-  - `FileOutputStream`：操作本地文件的字节输出流
+```java
+// 1. 创建字节输出流对象
+// 注意1：参数是字符串表示的路径或者File对象都是可以的
+// 注意2：如果文件不存在会创建一个新的文件，但是要保证父级路径是存在的
+// 注意3：如果文件已经存在，则会清空文件
+FileOutputStream outputStream = new FileOutputStream("a.txt");
+// 2. 写数据
+// 注意：write方法的参数是证书，但是实际上写到本地文件中的是证书在ASCII上对应的字符
+outputStream.write(97);
+// 3。释放资源
+// 注意：每次使用完流之后都要释放资源
+outputStream.close();
+```
 
-  - ```java
-    // 1. 创建字节输出流对象
-    // 注意1：参数是字符串表示的路径或者File对象都是可以的
-    // 注意2：如果文件不存在会创建一个新的文件，但是要保证父级路径是存在的
-    // 注意3：如果文件已经存在，则会清空文件
-    FileOutputStream outputStream = new FileOutputStream("a.txt");
-    // 2. 写数据
-    // 注意：write方法的参数是证书，但是实际上写到本地文件中的是证书在ASCII上对应的字符
-    outputStream.write(97);
-    // 3。释放资源
-    // 注意：每次使用完流之后都要释放资源
-    outputStream.close();
-    ```
+- 换行符：windows：`\r\n`，linux：`\n`，mac：`\r`
 
-  - 换行符：windows：`\r\n`，linux：`\n`，mac：`\r`
-
-  - 续写：打开续写开关：`FileOutputStream(String name, boolean append)`
+- 续写：打开续写开关：`FileOutputStream(String name, boolean append)`
 
 #### 2、管道IO流
 
@@ -82,9 +81,7 @@ IO流定义：**存储和读取数据的解决方案**
 
 #### 4、**Buffered 缓冲流**
 
-**字节缓冲流**
-
-IO 操作是很消耗性能的，缓冲流将数据加载至缓冲区，一次性读取/写入多个字节，从而避免频繁的 IO 操作，提高流的传输效率。字节缓冲流这里采用了**装饰器模式**来增强 `InputStream` 和`OutputStream`子类对象的功能。
+**字节缓冲流**：IO 操作是很消耗性能的，缓冲流将数据加载至缓冲区，一次性读取/写入多个字节，从而避免频繁的 IO 操作，提高流的传输效率。字节缓冲流这里采用了**装饰器模式**来增强 `InputStream` 和`OutputStream`子类对象的功能。
 
 - `BufferedInputStream`：从源头（通常是文件）读取数据（字节信息）到内存的过程中不会一个字节一个字节的读取，而是会先将读取到的字节存放在缓存区，并从内部缓冲区中单独读取字节。这样大幅减少了 IO 次数，提高了读取效率。
 
@@ -540,7 +537,7 @@ Java中3种常见的IO模型：BIO（Blocking I/O）、NIO、AIO
 
 <img src="Java.assets/6a9e704af49b4380bb686f0c96d33b81tplv-k3u1fbpfcp-watermark.png" alt="图源：《深入拆解Tomcat & Jetty》" style="zoom: 50%;" />
 
-在客户端连接数量不高的情况下，是没问题的。但是，当面对十万甚至百万级连接的时候，传统的 BIO 模型是无能为力的。因此，我们需要一种更高效的 I/O 处理模型来应对更高的并发量。
+在**客户端连接数量不高**的情况下，是没问题的。但是，当面对十万甚至百万级连接的时候，传统的 BIO 模型是无能为力的。因此，我们需要一种更高效的 I/O 处理模型来应对更高的并发量。
 
 #### NIO(Non-blocking/New I/O)
 
@@ -556,29 +553,51 @@ Java 中的 `NIO` 可以看作是 **I/O 多路复用模型**。
 
 同步非阻塞 IO 模型中，应用程序会一直发起 read 调用，等待数据从内核空间拷贝到用户空间的这段时间里，线程依然是阻塞的，直到在内核把数据拷贝到用户空间。
 
-> 相较于BIO的优点：通过轮询操作，避免了一直阻塞
+> 相较于BIO的优点：通过**轮询操作**，避免了一直阻塞
 >
 > 缺点：**应用程序不断进行 I/O 系统调用轮询数据是否已经准备好的过程是十分消耗 CPU 资源的。**
 
 **2、I/O多路复用模型**
 
-IO 多路复用模型中，线程首先发起 select 调用，询问内核数据是否准备就绪，等内核把数据准备好了，用户线程再发起 read 调用。read 调用的过程（数据从内核空间 -> 用户空间）还是阻塞的。
+IO 多路复用模型中，线程首先发起 **select 调用**，询问内核数据是否准备就绪，等内核把数据准备好了，用户线程再发起 read 调用。read 调用的过程（数据从内核空间 -> 用户空间）还是阻塞的。
 
 **IO 多路复用模型，通过减少无效的系统调用，减少了对 CPU 资源的消耗。**
 
 <img src="Java.assets/88ff862764024c3b8567367df11df6abtplv-k3u1fbpfcp-watermark.png" alt="img" style="zoom:50%;" />
 
-### AIO(Asynchronous I/O)
+#### AIO(Asynchronous I/O)
 
 `AIO` 也就是 `NIO 2`。Java 7 中引入了 `NIO` 的改进版 `NIO 2`，它是异步 IO 模型。
 
-异步 IO 是基于事件和回调机制实现的，也就是应用操作之后会直接返回，不会堵塞在那里，当后台处理完成，操作系统会通知相应的线程进行后续的操作。
+异步 IO 是基于**事件和回调机制**实现的，也就是应用操作之后会直接返回，不会堵塞在那里，当后台处理完成，操作系统会通知相应的线程进行后续的操作。
 
 <img src="Java.assets/3077e72a1af049559e81d18205b56fd7tplv-k3u1fbpfcp-watermark.png" alt="img" style="zoom:50%;" />
 
 ------
 
 ## 集合
+
+总的区分：
+
+`List`(对付顺序的好帮手): 存储的元素是有序的、可重复的。
+
+`Set`(注重独一无二的性质): 存储的元素不可重复的。
+
+`Queue`(实现排队功能的叫号机): 按特定的排队规则来确定先后顺序，存储的元素是有序的、可重复的。
+
+`Map`(用 key 来搜索的专家): 使用键值对（key-value）存储，key 是无序的、不可重复的，value 是无序的、可重复的，每个键最多映射到一个值
+
+![Java 集合框架概览](Java.assets/java-collection-hierarchy.png)
+
+### Collections
+
+#### Set
+
+#### List
+
+#### Queue
+
+### Map
 
 ------
 
