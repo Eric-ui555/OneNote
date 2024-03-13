@@ -2,8 +2,8 @@
 
 ## leetcode刷题笔记
 
-[leetcode题解](./leetcode题解.md)
+[leetcode题解](./算法/leetcode题解.md)
 
 ## Java学习笔记
 
-[Java学习记录](./Java.md)：包含JVM
+[Java学习记录](./Java/Java.md)：包含JVM

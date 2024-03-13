@@ -504,6 +504,87 @@ public static List<List<Integer>> fourSum(int[] nums, int target) {
 }
 ```
 
+## 142 环形链表
+
+[142. 环形链表 II](https://leetcode.cn/problems/linked-list-cycle-ii/)
+
+**题目描述**
+
+给定一个链表的头节点  `head` ，返回链表开始入环的第一个节点。 *如果链表无环，则返回 `null`。*
+
+如果链表中有某个节点，可以通过连续跟踪 `next` 指针再次到达，则链表中存在环。 为了表示给定链表中的环，评测系统内部使用整数 `pos` 来表示链表尾连接到链表中的位置（**索引从 0 开始**）。如果 `pos` 是 `-1`，则在该链表中没有环。**注意：`pos` 不作为参数进行传递**，仅仅是为了标识链表的实际情况。
+
+**不允许修改** 链表。
+
+**示例**
+
+![img](leetcode题解.assets/circularlinkedlist.png)
+
+> 输入：`head = [3,2,0,-4], pos = 1`
+> 输出：返回索引为 1 的链表节点
+> 解释：链表中有一个环，其尾部连接到第二个节点。
+
+**解题思路**
+
+双指针法
+
+双指针的第一次相遇：
+
+1. 设两指针 `fast`，`slow` 指向链表头部 `head` 。
+2. 令 `fast` 每轮走 222 步，`slow` 每轮走 111 步。
+
+第一种结果： fast 指针走过链表末端，说明链表无环，此时直接返回 null。
+
+- 如果链表存在环，则双指针一定会相遇。因为每走 1 轮，fast 与 slow 的间距 +1，fast 一定会追上 slow 。
+
+第二种结果： 当`fast == slow`时， 两指针在环中第一次相遇。下面分析此时 fast 与 slow 走过的步数关系：
+
+- 设链表共有 a+b个节点，其中 链表头部到链表入口 有 a个节点（不计链表入口节点）， 链表环 有 b 个节点（这里需要注意，a 和 b 是未知数，例如图解上链表 a=4 , b=5）；设两指针分别走了 f，s 步，则有：
+
+- fast 走的步数是 slow 步数的 2 倍，即 `f=2s`；（解析： fast 每轮走 2 步）。fast 比 slow 多走了 n 个环的长度，即 `f=s+nb`；（ 解析： 双指针都走过 a 步，然后在环内绕圈直到重合，重合时 fast 比 slow 多走环的长度整数倍 ）。
+- 将以上两式相减得到 `f=2nb，s=nb`，即 fast 和 slow 指针分别走了 `2n，n` 个环的周长。
+
+接下来该怎么做呢？
+
+- 如果让指针从链表头部一直向前走并统计步数k，那么所有走到链表入口节点时的步数 是：`k=a+nb`，即先走 a 步到入口节点，之后每绕 1 圈环（ b 步）都会再次到入口节点。而目前 slow 指针走了 `nb` 步。因此，我们只要想办法让 slow 再走 `a` 步停下来，就可以到环的入口。
+
+- 但是我们不知道 a 的值，该怎么办？依然是使用双指针法。考虑构建一个指针，此指针需要有以下性质：此指针和 slow 一起向前走 a 步后，两者在入口节点重合。那么从哪里走到入口节点需要 `a`步？答案是链表头节点head。
+
+双指针第二次相遇：
+
+- 令 fast 重新指向链表头部节点。此时 `f=0，s=nb` 。
+- slow 和 fast 同时每轮向前走 1步。
+- 当 fast 指针走到 f=a 步时，slow 指针走到 `s=a+nb` 步。此时两指针重合，并同时指向链表环入口，返回 slow 指向的节点即可。
+
+**参考代码**
+
+```java
+public ListNode detectCycle(ListNode head) {
+    // 定义快慢指针。指向头节点
+    ListNode fast = head, slow = head;
+    // 快慢指针在环中第一次相遇
+    // 设无环的结点数为a, 环中节点数为b
+    // 设两指针分别走了 f，s 步， 则有f = 2s
+    // 同时亦有：f = s + nb
+    // 则 s = nb, f = 2nb
+    do {
+        if (fast == null || fast.next == null) return null;
+        fast = fast.next.next;
+        slow = slow.next;
+    } while (slow != fast);
+    // 链表环状入口的位置是： k = a + nb, 即先走 a 步到入口节点，之后每绕 1 圈环（ b 步）都会再次到入口节点。
+    // 目前 slow 指针走了 nb 步。因此，我们只要想办法让 slow 再走 a 步停下来，就可以到环的入口。
+    // 快指针指向头结点
+    fast = head;
+    // 快慢指针第二次相遇
+    while (slow != fast) {
+        slow = slow.next;
+        fast = fast.next;
+    }
+    return fast;
+}
+```
+
 
 
 # 滑动窗口
@@ -1696,6 +1777,58 @@ class Solution {
             path.removeLast();
         }
     }
+}
+```
+
+# 技巧性
+
+## 287 寻找重复数
+
+[287. 寻找重复数](https://leetcode.cn/problems/find-the-duplicate-number/)
+
+**题目描述**
+
+给定一个包含 `n + 1` 个整数的数组 `nums` ，其数字都在 `[1, n]` 范围内（包括 `1` 和 `n`），可知至少存在一个重复的整数。
+
+假设 `nums` 只有 **一个重复的整数** ，返回 **这个重复的数** 。
+
+你设计的解决方案必须 **不修改** 数组 `nums` 且只用常量级 `O(1)` 的额外空间。
+
+**示例**
+
+> 输入：`nums = [1,3,4,2,2]`
+> 输出：2
+
+**解题思路**
+
+暴力解法：双重遍历，时间复杂度O(n^2)，空间复杂度O(1)
+
+哈希表/数组：需要额外的存储空间，时间复杂度O(n)，空间复杂度O(n)
+
+二分查找
+
+快慢指针：[Floyd判圈算法（龟兔赛跑算法）](https://www.jianshu.com/p/9b6a9bf31144)
+
+- 我们对 nums  数组建图，每个位置 iii 连一条 `i→nums[i]`的边。由于存在的重复的数字`target`，因此 target 这个位置一定有起码两条指向它的边，因此整张图一定存在环，且我们要找到的 target 就是这个环的入口，那么整个问题就等价于 [142. 环形链表 II](https://leetcode.cn/problems/linked-list-cycle-ii/)
+- 我们先设置慢指针 slow和快指针 fast，慢指针每次走一步，快指针每次走两步，根据「Floyd 判圈算法」两个指针在有环的情况下一定会相遇，此时我们再将 slow 放置起点 0，两个指针每次同时移动一步，相遇的点就是答案。
+- 时间复杂度：O(n)。`「Floyd 判圈算法」`时间复杂度为线性的时间复杂度。
+- 空间复杂度：O(1)。我们只需要常数空间存放若干变量。
+
+**参考代码**
+
+```java
+public int findDuplicate(int[] nums) {
+    int slow = 0, fast = 0;
+    do {
+        slow = nums[slow];
+        fast = nums[nums[fast]];
+    } while (slow != fast);
+    slow = 0;
+    while (slow != fast) {
+        slow = nums[slow];
+        fast = nums[fast];
+    }
+    return slow;
 }
 ```
 
