@@ -1653,7 +1653,7 @@ Other Benefits of Views (2:37)
 
 ### 什么是存储过程
 
-What are Stored Procedures (2:18)
+What are `Stored Procedures` (2:18)
 
 **小结**
 
@@ -1669,7 +1669,7 @@ What are Stored Procedures (2:18)
 
 假设你要开发一个使用数据库的应用程序，你应该将SQL语句写在哪里呢？
 
-如果将SQL语句内嵌在应用程序的代码里，将使其混乱且难以维护，所以应该将SQL代码和应用程序代码分开，将SQL代码储存在所属的数据库中，具体来说，是放在储存过程（stored procedure）和函数中。
+如果将SQL语句内嵌在应用程序的代码里，将使其混乱且难以维护，所以应该将SQL代码和应用程序代码分开，将SQL代码储存在所属的数据库中，具体来说，是放在储存过程（`stored procedure`）和函数中。
 
 储存过程是一个包含SQL代码模块的数据库对象，在应用程序代码中，我们调用储存过程来获取和保存数据（get and save the data）。也就是说，我们使用储存过程来储存和管理SQL代码。
 
