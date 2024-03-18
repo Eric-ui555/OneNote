@@ -603,6 +603,144 @@ IO 多路复用模型中，线程首先发起 **select 调用**，询问内核�
 
 ## 多线程
 
+
+
+------
+
+## 反射
+
+概念：
+
+- 反射赋予了我们**在运行时分析类以及执行类中方法**的能力
+- 通过反射获取任意一个类的所有属性和方法，还可以调用这些方法和属性
+
+应用场景
+
+- 动态代理
+
+```java
+public class DebugInvocationHandler implements InvocationHandler {
+    /**
+     * 代理类中的真实对象
+     */
+    private final Object target;
+
+    public DebugInvocationHandler(Object target) {
+        this.target = target;
+    }
+
+
+    public Object invoke(Object proxy, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        System.out.println("before method " + method.getName());
+        Object result = method.invoke(target, args);
+        System.out.println("after method " + method.getName());
+        return result;
+    }
+}
+```
+
+- 注解：
+
+  - @Component 声明一个类为Spring Bean 
+
+  - @Value 读取配置文件中的值
+
+优缺点：
+
+- 优点：可以让咱们的代码更加灵活、为各种框架提供开箱即用的功能提供了便利
+- 缺点：增加了安全问题，比如可以无视泛型参数的安全检查（泛型参数的安全检查发生在编译时）
+
+获取Class的四种方式
+
+- 1，知道具体类的情况下：`Class alunbarClass = TargetObject.class;`
+- 2，通过 `Class.forName()`传入类的全路径获取：`Class alunbarClass1 = Class.forName("cn.javaguide.TargetObject");`
+- 3，通过对象实例获取`instance.getClass()`获取：`TargetObject o = new TargetObject();  Class alunbarClass2 = o.getClass();`
+- 4，通过类加载器`xxxClassLoader.loadClass()`传入类路径获取:`ClassLoader.getSystemClassLoader().loadClass("cn.javaguide.TargetObject");`
+
+反射的一些基本操作
+
+1. 创建一个我们要使用反射操作的类 `TargetObject`。
+
+```java
+package cn.javaguide;
+
+public class TargetObject {
+    private String value;
+
+    public TargetObject() {
+        value = "JavaGuide";
+    }
+
+    public void publicMethod(String s) {
+        System.out.println("I love " + s);
+    }
+
+    private void privateMethod() {
+        System.out.println("value is " + value);
+    }
+}
+```
+
+2. 使用反射操作这个类的方法以及参数
+
+```java
+package cn.javaguide;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+public class Main {
+    public static void main(String[] args) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchFieldException {
+        /**
+         * 获取 TargetObject 类的 Class 对象并且创建 TargetObject 类实例
+         */
+        Class<?> targetClass = Class.forName("cn.javaguide.TargetObject");
+        TargetObject targetObject = (TargetObject) targetClass.newInstance();
+        /**
+         * 获取 TargetObject 类中定义的所有方法
+         */
+        Method[] methods = targetClass.getDeclaredMethods();
+        for (Method method : methods) {
+            System.out.println(method.getName());
+        }
+
+        /**
+         * 获取指定方法并调用
+         */
+        Method publicMethod = targetClass.getDeclaredMethod("publicMethod",
+                String.class);
+
+        publicMethod.invoke(targetObject, "JavaGuide");
+
+        /**
+         * 获取指定参数并对参数进行修改
+         */
+        Field field = targetClass.getDeclaredField("value");
+        //为了对类中的参数进行修改我们取消安全检查
+        field.setAccessible(true);
+        field.set(targetObject, "JavaGuide");
+
+        /**
+         * 调用 private 方法
+         */
+        Method privateMethod = targetClass.getDeclaredMethod("privateMethod");
+        //为了调用private方法我们取消安全检查
+        privateMethod.setAccessible(true);
+        privateMethod.invoke(targetObject);
+    }
+}
+```
+
+输出内容
+
+```java
+publicMethod
+privateMethod
+I love JavaGuide
+value is JavaGuide
+```
+
 ------
 
 # JVM
@@ -1149,7 +1287,7 @@ Java虚拟机栈存储了Java方法调用时的栈帧，而本地方法栈存储
 
 一般Java程序中堆内存是空间最大的一块内存区域。创建出来的对象都存在于堆上。
 
-栈上的局部变量表中，可以存放堆上对象的引用。静态变量也可以存放堆对象的引用，通过静态变量就可以实 现对象在线程之间共享。
+栈上的局部变量表中，可以存放堆上对象的引用。静态变量也可以存放堆对象的引用，通过静态变量就可以实现对象在线程之间共享。
 
 > 堆内存会溢出吗？
 >
@@ -1163,7 +1301,7 @@ Java虚拟机栈存储了Java方法调用时的栈帧，而本地方法栈存储
 
 堆内存used total max三个值可以通过dashboard命令看到；
 
- 手动指定刷新频率（不指定默认5秒一次）：dashboard –i 刷新频率(毫秒)
+手动指定刷新频率（不指定默认5秒一次）：dashboard –i 刷新频率(毫秒)
 
 如果不设置任何的虚拟机参数，max默认是系统内存的1/4，total默认是系统内存的1/64。在实际应用中一般都需要设置 total和max的值。
 
@@ -2139,8 +2277,4 @@ public interface InvocationHandler {
 2. 动态代理，代理类通过 `Proxy.newInstance()` 方法生成。
 3. `JDK`实现的代理中不管是静态代理还是动态代理，代理与被代理者都要实现两样接口，它们的实质是面向接口编程。`CGLib`可以不需要接口。
 4. 动态代理通过 Proxy 动态生成 proxy class，但是它也指定了一个 `InvocationHandler` 的实现类。
-
-
-
-
 

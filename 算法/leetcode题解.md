@@ -1725,6 +1725,10 @@ public int uniquePathsWithObstacles(int[][] obstacleGrid) {
 
 ![77.组合1](leetcode题解.assets/20201123195242899.png)
 
+1. 确定回溯函数参数，定义全局链表收集叶子节点的结果，在定义一个全局数组收集结果，startIndex表示遍历到那个参数
+2. 确定终止条件；
+3. 确定单层遍历逻辑；
+
 **参考代码**
 
 ```java
@@ -1746,16 +1750,18 @@ class Solution {
         for (int i = startIndex; i <= n; i++) {
             path.offer(i);
             backtrack(n, k, i + 1);
-            path.R();
+            path.removeLast();
         }
     }
 }
 ```
 
 ```java
+// 剪枝优化
 class Solution {
     List<List<Integer>> result = new ArrayList<>();
     LinkedList<Integer> path = new LinkedList<>();
+    
     public List<List<Integer>> combine(int n, int k) {
         combineHelper(n, k, 1);
         return result;
@@ -1779,6 +1785,586 @@ class Solution {
     }
 }
 ```
+
+## 39 组合总和
+
+[39. 组合总和](https://leetcode.cn/problems/combination-sum/)
+
+**题目描述**
+
+给你一个 **无重复元素** 的整数数组 `candidates` 和一个目标整数 `target` ，找出 `candidates` 中可以使数字和为目标数 `target` 的 所有 **不同组合** ，并以列表形式返回。你可以按 **任意顺序** 返回这些组合。
+
+`candidates` 中的 **同一个** 数字可以 **无限制重复被选取** 。如果至少一个数字的被选数量不同，则两种组合是不同的。 
+
+对于给定的输入，保证和为 `target` 的不同组合数少于 `150` 个。
+
+**示例**
+
+> 输入：`candidates = [2,3,6,7], target = 7`
+> 输出：`[[2,2,3],[7]]`
+> 解释：
+> 2 和 3 可以形成一组候选，2 + 2 + 3 = 7 。注意 2 可以使用多次。
+> 7 也是一个候选， 7 = 7 。
+> 仅有这两种组合。
+
+> **提示：**
+>
+> - `1 <= candidates.length <= 30`
+> - `2 <= candidates[i] <= 40`
+> - `candidates` 的所有元素 **互不相同**
+> - `1 <= target <= 40`
+
+**具体思路**
+
+本题搜索的过程抽象成树形结构如下：
+
+![39.组合总和](leetcode题解.assets/20201223170730367.png) 注意图中叶子节点的返回条件，因为本题没有组合数量要求，仅仅是总和的限制，所以递归没有层数的限制，只要选取的元素总和超过target，就返回！
+
+**注意本题和[77.组合 (opens new window)](https://programmercarl.com/0077.组合.html)、[216.组合总和III (opens new window)](https://programmercarl.com/0216.组合总和III.html)的一个区别是：本题元素为可重复选取的**。
+
+**参考代码**
+
+```java
+class Solution {
+    List<List<Integer>> result = new ArrayList<>();
+
+    LinkedList<Integer> path = new LinkedList<>();
+
+    public List<List<Integer>> combinationSum(int[] candidates, int target) {
+        result.clear();
+        path.clear();
+        Arrays.sort(candidates);
+        backtrace(candidates, target, 0, 0);
+        return result;
+    }
+
+    private void backtrace(int[] candidates, int target, int startIndex, int sum) {
+        if (sum > target) {
+            return;
+        }
+        if (sum == target) {
+            result.add(new ArrayList<>(path));
+            return;
+        }
+        for (int i = startIndex; i < candidates.length && sum + candidates[i] <= target; i++) {
+            sum += candidates[i];
+            path.add(candidates[i]);
+            backtrace(candidates, target, i, sum); // 不用i+1了，表示可以重复读取当前的数
+            sum -= candidates[i];
+            path.removeLast();
+        }
+    }
+}
+```
+
+## 40 组合总和 II
+
+[40. 组合总和 II](https://leetcode.cn/problems/combination-sum-ii/)
+
+**题目描述**
+
+给定一个候选人编号的集合 `candidates` 和一个目标数 `target` ，找出 `candidates` 中所有可以使数字和为 `target` 的组合。
+
+`candidates` 中的每个数字在每个组合中只能使用 **一次** 。
+
+**注意：**解集不能包含重复的组合。 
+
+**示例**
+
+> 输入: `candidates = [10,1,2,7,6,1,5], target = 8`
+> 输出:`[[1,1,6],[1,2,5],[1,7],[2,6]]`
+
+**具体思路**
+
+如图：
+
+![40.组合总和II1](leetcode题解.assets/20230310000954.png)
+
+1. 确定回溯函数参数
+   - 定义全局链表收集叶子节点的结果
+   - 定义一个全局数组收集结果
+   - used表示是否用过该节点
+   - `startIndex`表示遍历到那个参数
+2. 确定终止条件；
+3. 确定单层遍历逻辑；
+
+**参考代码**
+
+```java
+class Solution {
+    List<List<Integer>> result = new ArrayList<>();
+
+    LinkedList<Integer> path = new LinkedList<>();
+
+    public List<List<Integer>> combinationSum2(int[] candidates, int target) {
+        boolean[] used = new boolean[candidates.length];
+        result.clear();
+        path.clear();
+        Arrays.sort(candidates);
+        backtrace(candidates, target, 0, 0, used);
+        return result;
+    }
+
+    private void backtrace(int[] candidates, int target, int startIndex, int sum, boolean[] used) {
+        if (sum > target) {
+            return;
+        }
+        if (sum == target) {
+            result.add(new ArrayList<>(path));
+            return;
+        }
+        for (int i = startIndex; i < candidates.length && sum + candidates[i] <= target; i++) {
+            // used[i - 1] == true，说明同一树枝candidates[i - 1]使用过
+            // used[i - 1] == false，说明同一树层candidates[i - 1]使用过
+            // 要对同一树层使用过的元素进行跳过
+            if (i > 0 && candidates[i] == candidates[i - 1] && !used[i - 1]) {
+                continue;
+            }
+            sum += candidates[i];
+            path.add(candidates[i]);
+            used[i] = true;
+            backtrace(candidates, target, i + 1, sum, used);
+            used[i] = false;
+            sum -= candidates[i];
+            path.removeLast();
+        }
+    }
+}
+```
+
+## 216 组合总和III
+
+[216. 组合总和 III](https://leetcode.cn/problems/combination-sum-iii/)
+
+**题目描述**
+
+找出所有相加之和为 `n` 的 `k` 个数的组合，且满足下列条件：
+
+- 只使用数字1到9
+- 每个数字 **最多使用一次** 
+
+返回 *所有可能的有效组合的列表* 。该列表不能包含相同的组合两次，组合可以以任何顺序返回。
+
+**示例**
+
+> 输入: k = 3, n = 9
+> 输出: [[1,2,6], [1,3,5], [2,3,4]]
+> 解释:
+> 1 + 2 + 6 = 9
+> 1 + 3 + 5 = 9
+> 2 + 3 + 4 = 9
+> 没有其他符合的组合了。
+
+> - `2 <= k <= 9`
+> - `1 <= n <= 60`
+
+**解题思路**
+
+![216.组合总和III1](leetcode题解.assets/2020112319580476.png)
+
+**参考代码**
+
+```java
+class Solution {
+    List<List<Integer>> result = new ArrayList<>();
+
+    LinkedList<Integer> path = new LinkedList<>();
+
+    public List<List<Integer>> combinationSum3(int k, int n) {
+        result.clear();
+        path.clear();
+        backtrace(k, n, 1, 0);
+        return result;
+    }
+
+    /**
+     * 回溯法方案
+     *
+     * @param k     目标数量
+     * @param n     目标总和
+     * @param index 当前数量
+     * @param sum   当前数量的总和
+     */
+    void backtrace(int k, int n, int index, int sum) {
+        // 剪枝
+        if (sum > n) {
+            return;
+        }
+        // 终止条件
+        if (path.size() == k) {
+            if(sum == n) {
+                result.add(new ArrayList<>(path));
+            }
+            return;
+        }
+        // 单层遍历逻辑，// 减枝 9 - (k - path.size()) + 1
+        for (int i = index; i <= 9 - (k - path.size()) + 1; i++) {
+            path.add(i);
+            sum += i;
+            backtrace(k, n, i + 1, sum);
+            path.removeLast();
+            sum -= i;  //回溯
+        }
+    }
+}
+```
+
+## 17 电话号码的字母组合
+
+[17. 电话号码的字母组合](https://leetcode.cn/problems/letter-combinations-of-a-phone-number/)
+
+**题目描述**
+
+给定一个仅包含数字 `2-9` 的字符串，返回所有它能表示的字母组合。答案可以按 **任意顺序** 返回。
+
+给出数字到字母的映射如下（与电话按键相同）。注意 1 不对应任何字母。
+
+![img](leetcode题解.assets/200px-telephone-keypad2svg.png)
+
+**示例**
+
+> 输入：`digits = "23"`
+> 输出：`["ad","ae","af","bd","be","bf","cd","ce","cf"]`
+
+**解题思路**
+
+回溯法
+
+例如：输入："23"，抽象为树形结构，如图所示：
+
+![17. 电话号码的字母组合](leetcode题解.assets/20201123200304469.png)
+
+1. 确定回溯函数参数，定义全局字符串收集叶子节点的结果，在定义一个全局字符串数组收集结果，index表示遍历到那个参数
+2. 确定终止条件；
+3. 确定单层遍历逻辑；
+
+**参考代码**
+
+```java
+public class LetterCombinations {
+    List<String> letterMap = Arrays.asList("", "", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz");
+
+    List<String> result = new ArrayList<>();
+
+    StringBuilder stringBuilder = new StringBuilder();
+
+    /**
+     * 使用回溯法来解决n个for循环的问题
+     */
+    public List<String> letterCombinations(String digits) {
+        result.clear();
+        if (digits == null || digits.isEmpty()) {
+            return result;
+        }
+        backtrace(digits, 0);
+        return result;
+    }
+
+
+    void backtrace(String digits, int index) {
+        if (index == digits.length()) {
+            result.add(stringBuilder.toString());
+            return;
+        }
+        int digit = digits.charAt(index) - '0';
+        String letters = letterMap.get(digit);
+        for (int i = 0; i < letters.length(); i++) {
+            stringBuilder.append(letters.charAt(i));
+            backtrace(digits, index + 1);
+            stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+        }
+    }
+
+    public static void main(String[] args) {
+        LetterCombinations letterCombinations = new LetterCombinations();
+        List<String> list = letterCombinations.letterCombinations("23");
+        System.out.println(list);
+    }
+}
+
+```
+
+## 131 分割回文串
+
+[131. 分割回文串](https://leetcode.cn/problems/palindrome-partitioning/)
+
+**题目描述**
+
+给你一个字符串 `s`，请你将 `s` 分割成一些子串，使每个子串都是 **回文串** 。返回 `s` 所有可能的分割方案。
+
+**示例**
+
+> 输入：`s = "aab"`
+> 输出：`[["a","a","b"],["aa","b"]]`
+
+> **提示：**
+>
+> - `1 <= s.length <= 16`
+> - `s` 仅由小写英文字母组成
+
+**解题思路**
+
+**切割问题类似组合问题**。
+
+例如对于字符串abcdef：
+
+- 组合问题：选取一个a之后，在bcdef中再去选取第二个，选取b之后在cdef中再选取第三个.....。
+- 切割问题：切割一个a之后，在bcdef中再去切割第二段，切割b之后在cdef中再切割第三段.....。
+
+![131.分割回文串](leetcode题解.assets/131.分割回文串-17107712652928.jpg)
+
+回溯法
+
+- 递归函数参数：
+  - 全局变量数组path存放切割后回文的子串，二维数组result存放结果集。 （这两个参数可以放到函数参数里）
+  - 本题递归函数参数还需要startIndex，因为切割过的地方，不能重复切割，和组合问题也是保持一致的。
+- 递归函数终止条件
+- 单层搜索的逻辑
+  - 在`for (int i = startIndex; i < s.size(); i++)`循环中，我们 定义了起始位置`startIndex`，那么 `[startIndex, i]` 就是要截取的子串。
+  - **注意切割过的位置，不能重复切割，所以，backtracking(s, i + 1); 传入下一层的起始位置为i + 1**。
+
+**参考代码**
+
+```java
+class Solution {
+    List<List<String>> result = new ArrayList<>();
+
+    LinkedList<String> path = new LinkedList<>();
+
+    public List<List<String>> partition(String s) {
+        result.clear();
+        path.clear();
+        backtrace(s, 0);
+        return result;
+    }
+
+    private void backtrace(String s, int startIndex) {
+        //如果起始位置大于s的大小，说明找到了一组分割方案
+        if (startIndex >= s.length()) {
+            result.add(new ArrayList<>(path));
+            return;
+        }
+        for (int i = startIndex; i < s.length(); i++) {
+            // 如果是回文子串，则记录
+            if (isPalindrome(s, startIndex, i)) {
+                String substring = s.substring(startIndex, i + 1);
+                path.add(substring);
+            } else {
+                continue;
+            }
+            // 起始位置后移，保证不重复
+            backtrace(s, i + 1);
+            path.removeLast();
+        }
+    }
+    // 判断是否是回文串
+    private Boolean isPalindrome(String s, int startIndex, int endIndex) {
+        for (int i = startIndex, j = endIndex; i < j; i++, j--) {
+            if (s.charAt(i) != s.charAt(j)) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+```
+
+## 93 复原IP地址
+
+[93. 复原 IP 地址](https://leetcode.cn/problems/restore-ip-addresses/)
+
+**题目描述**
+
+**有效 IP 地址** 正好由四个整数（每个整数位于 `0` 到 `255` 之间组成，且不能含有前导 `0`），整数之间用 `'.'` 分隔。
+
+- 例如：`"0.1.2.201"` 和` "192.168.1.1"` 是 **有效** IP 地址，但是 `"0.011.255.245"`、`"192.168.1.312"` 和 `"192.168@1.1"` 是 **无效** IP 地址。
+
+给定一个只包含数字的字符串 `s` ，用以表示一个 IP 地址，返回所有可能的**有效 IP 地址**，这些地址可以通过在 `s` 中插入 `'.'` 来形成。你 **不能** 重新排序或删除 `s` 中的任何数字。你可以按 **任何** 顺序返回答案。
+
+**示例**
+
+```java
+输入：s = "25525511135"
+输出：["255.255.11.135","255.255.111.35"]
+    
+输入：s = "0000"
+输出：["0.0.0.0"]
+    
+输入：s = "101023"
+输出：["1.0.10.23","1.0.102.3","10.1.0.23","10.10.2.3","101.0.2.3"]  
+```
+
+**解题思路**
+
+递归参数：
+
+- `startIndex`一定是需要的，因为不能重复分割，记录下一层递归分割的起始位置。
+
+- 本题我们还需要一个变量`pointNum`，记录添加逗点的数量。
+
+递归终止条件
+
+- `pointNum`表示逗点数量，`pointNum`为3说明字符串分成了4段了，然后验证一下第四段是否合法，如果合法就加入到结果集里
+
+单层搜索的逻辑
+
+- 在`for (int i = startIndex; i < s.size(); i++)`循环中 `[startIndex, i]` 这个区间就是截取的子串，需要判断这个子串是否合法。
+- 如果合法就在字符串后面加上符号`.`表示已经分割。
+- 如果不合法就结束本层循环，如图中剪掉的分支：
+- 然后就是递归和回溯的过程：递归调用时，下一层递归的`startIndex`要从i+2开始（因为需要在字符串中加入了分隔符`.`），同时记录分割符的数量`pointNum` 要 +1。
+
+
+
+![image-20240318220818631](leetcode题解.assets/image-20240318220818631.png)
+
+**参考代码**
+
+```java
+class Solution {
+    List<String> result = new ArrayList<>();
+
+    public List<String> restoreIpAddresses(String s) {
+        if (s.length() > 12) return result; // 算是剪枝了
+        backTrack(s, 0, 0);
+        return result;
+    }
+
+    // startIndex: 搜索的起始位置， pointNum:添加逗点的数量
+    private void backTrack(String s, int startIndex, int pointNum) {
+        if (pointNum == 3) {// 逗点数量为3时，分隔结束
+            // 判断第四段⼦字符串是否合法，如果合法就放进result中
+            if (isValid(s,startIndex,s.length()-1)) {
+                result.add(s);
+            }
+            return;
+        }
+        for (int i = startIndex; i < s.length(); i++) {
+            if (isValid(s, startIndex, i)) {
+                s = s.substring(0, i + 1) + "." + s.substring(i + 1);    //在str的后⾯插⼊⼀个逗点
+                pointNum++;
+                backTrack(s, i + 2, pointNum);// 插⼊逗点之后下⼀个⼦串的起始位置为i+2
+                pointNum--;// 回溯
+                s = s.substring(0, i + 1) + s.substring(i + 2);// 回溯删掉逗点
+            } else {
+                break;
+            }
+        }
+    }
+
+    // 判断字符串s在左闭⼜闭区间[start, end]所组成的数字是否合法
+    private Boolean isValid(String s, int start, int end) {
+        if (start > end) {
+            return false;
+        }
+        if (s.charAt(start) == '0' && start != end) { // 0开头的数字不合法
+            return false;
+        }
+        int num = 0;
+        for (int i = start; i <= end; i++) {
+            if (s.charAt(i) > '9' || s.charAt(i) < '0') { // 遇到⾮数字字符不合法
+                return false;
+            }
+            num = num * 10 + (s.charAt(i) - '0');
+            if (num > 255) { // 如果⼤于255了不合法
+                return false;
+            }
+        }
+        return true;
+    }
+}
+```
+
+```java
+//方法一：但使用stringBuilder，故优化时间、空间复杂度，因为向字符串插入字符时无需复制整个字符串，从而减少了操作的时间复杂度，也不用开新空间存subString，从而减少了空间复杂度。
+class Solution {
+    List<String> result = new ArrayList<>();
+    
+    public List<String> restoreIpAddresses(String s) {
+        StringBuilder sb = new StringBuilder(s);
+        backTracking(sb, 0, 0);
+        return result;
+    }
+    
+    private void backTracking(StringBuilder s, int startIndex, int dotCount){
+        if(dotCount == 3){
+            if(isValid(s, startIndex, s.length() - 1)){
+                result.add(s.toString());
+            }
+            return;
+        }
+        for(int i = startIndex; i < s.length(); i++){
+            if(isValid(s, startIndex, i)){
+                s.insert(i + 1, '.');
+                backTracking(s, i + 2, dotCount + 1);
+                s.deleteCharAt(i + 1);
+            }else{
+                break;
+            }
+        }
+    }
+    //[start, end]
+    private boolean isValid(StringBuilder s, int start, int end){
+        if(start > end)
+            return false;
+        if(s.charAt(start) == '0' && start != end)
+            return false;
+        int num = 0;
+        for(int i = start; i <= end; i++){
+            int digit = s.charAt(i) - '0';
+            num = num * 10 + digit;
+            if(num > 255)
+                return false;
+        }
+        return true;
+    }
+}
+```
+
+```java
+// 方法二：比上面的方法时间复杂度低，更好地剪枝，优化时间复杂度
+class Solution {
+    List<String> result = new ArrayList<String>();
+	StringBuilder stringBuilder = new StringBuilder();
+
+	public List<String> restoreIpAddresses(String s) {
+		restoreIpAddressesHandler(s, 0, 0);
+		return result;
+	}
+
+	// number表示stringbuilder中ip段的数量
+	public void restoreIpAddressesHandler(String s, int start, int number) {
+		// 如果start等于s的长度并且ip段的数量是4，则加入结果集，并返回
+		if (start == s.length() && number == 4) {
+			result.add(stringBuilder.toString());
+			return;
+		}
+		// 如果start等于s的长度但是ip段的数量不为4，或者ip段的数量为4但是start小于s的长度，则直接返回
+		if (start == s.length() || number == 4) {
+			return;
+		}
+		// 剪枝：ip段的长度最大是3，并且ip段处于[0,255]
+		for (int i = start; i < s.length() && i - start < 3 && Integer.parseInt(s.substring(start, i + 1)) >= 0
+				&& Integer.parseInt(s.substring(start, i + 1)) <= 255; i++) {
+			// 如果ip段的长度大于1，并且第一位为0的话，continue
+			if (i + 1 - start > 1 && s.charAt(start) - '0' == 0) {
+				continue;
+			}
+			stringBuilder.append(s.substring(start, i + 1));
+			// 当stringBuilder里的网段数量小于3时，才会加点；如果等于3，说明已经有3段了，最后一段不需要再加点
+			if (number < 3) {
+				stringBuilder.append(".");
+			}
+			number++;
+			restoreIpAddressesHandler(s, i + 1, number);
+			number--;
+			// 删除当前stringBuilder最后一个网段，注意考虑点的数量的问题
+			stringBuilder.delete(start + number, i + number + 2);
+		}
+	}
+}
+```
+
+
 
 # 技巧性
 
