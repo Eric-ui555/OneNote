@@ -98,8 +98,7 @@ outputStream.close();
   缓冲区源码：
 
   ```java
-  public
-  class BufferedInputStream extends FilterInputStream {
+  public class BufferedInputStream extends FilterInputStream {
       // 内部缓冲区数组
       protected volatile byte buf[];
       // 缓冲区的默认大小
@@ -118,7 +117,7 @@ outputStream.close();
       }
   }
   ```
-
+  
 - `BufferedOutputStream`：将数据（字节信息）写入到目的地（通常是文件）的过程中不会一个字节一个字节的写入，而是会先将要写入的字节存放在缓存区，并从内部缓冲区中单独写入字节。这样大幅减少了 IO 次数，提高了读取效率
 
   ```java
@@ -196,9 +195,9 @@ outputStream.close();
 
   ```java
   FileInputStream fileInputStream = new FileInputStream("input.txt");
-  //必须将fileInputStream作为构造参数才能使用
+  // 必须将fileInputStream作为构造参数才能使用
   DataInputStream dataInputStream = new DataInputStream(fileInputStream);
-  //可以读取任意具体的类型数据
+  // 可以读取任意具体的类型数据
   dataInputStream.readBoolean();
   dataInputStream.readInt();
   dataInputStream.readUTF();
@@ -260,7 +259,7 @@ output.writeObject(person);
 
 ### 字符集
 
-在计算机中，，任意数据都是以二进制的形式
+在计算机中，任意数据都是以二进制的形式组织的
 
 **计算机存储规则**
 
@@ -274,7 +273,7 @@ output.writeObject(person);
 
 `GBK字符集`：2000年3月17日发布，收录21003个汉字
 
-- 包含国际标准`GB13000-1`中的全部中日韩汉字，和BIG5字符集的所有汉字
+- 包含国际标准`GB13000-1`中的全部中日韩汉字，和`BIG5`字符集的所有汉字
 - windows系统默认使用的`GBK`，系统显示`ANSI`
 - 英文：一个字节存储，完全兼容ASCII，二进制前面补0
 - 汉字：汉字两个字节存储，高位字节二进制一定以1开头，转成十进制之后是一个负数
@@ -285,7 +284,7 @@ output.writeObject(person);
 - **UTF-32编码规则**：固定使用四个字节保存
 - **UTF-8编码规则**：用1-4个字节保存
   - **英文字母：1个字节**，二进制的第一位是0，转成十进制是正数
-  - **中文汉字：3个字节**，二进制的第一位是1，第一个字节转成十进制是父数
+  - **中文汉字：3个字节**，二进制的第一位是1，第一个字节转成十进制是负数
 
 > 为什么会有乱码？
 
@@ -304,13 +303,13 @@ output.writeObject(person);
 
 我们常见的`BufferedInputStream`(字节缓冲输入流)、`DataInputStream` 等等都是`FilterInputStream` 的子类，`BufferedOutputStream`（字节缓冲输出流）、`DataOutputStream`等等都是`FilterOutputStream`的子类。
 
-装饰器类需要跟原始类继承相同的抽象类或者实现相同的接口。上面介绍到的这些 IO 相关的装饰类和原始类共同的父类是 `InputStream` 和`OutputStream`。
+**装饰器类需要跟原始类继承相同的抽象类或者实现相同的接口**。上面介绍到的这些 IO 相关的装饰类和原始类共同的父类是 `InputStream` 和`OutputStream`。
 
 #### 适配器模式
 
-**适配器（Adapter Pattern）模式** 主要用于接口互不兼容的类的协调工作，你可以将其联想到我们日常经常使用的电源适配器。
+**适配器（Adapter Pattern）模式** 主要用于**接口互不兼容的类的协调工作**，你可以将其联想到我们日常经常使用的电源适配器。
 
-适配器模式中存在被适配的对象或者类称为 **适配者(Adaptee)** ，作用于适配者的对象或者类称为**适配器(Adapter)** 。适配器分为对象适配器和类适配器。类适配器使用继承关系来实现，对象适配器使用组合关系来实现。
+适配器模式中存在被适配的对象或者类称为 **适配者(Adaptee)** ，作用于适配者的对象或者类称为**适配器(Adapter)** 。适配器分为对象适配器和类适配器。**类适配器使用继承关系来实现，对象适配器使用组合关系来实现。**
 
 IO 流中的字符流和字节流的接口不同，它们之间可以协调工作就是基于适配器模式来做的，更准确点来说是对象适配器。通过适配器，我们可以将字节流对象适配成一个字符流对象，这样我们可以直接通过字节流对象来读取或者写入字符数据。
 
@@ -525,9 +524,20 @@ class PollingWatchService
 
 ### IO 设计模型
 
+**同步和异步**
+
+- 同步：发出一个调用时，在没有得到结果之前，该调用就不返回
+- 异步：在调用发出后，被调用者返回结果之后会通知调用者，或通过回调函数处理这个调用
+
+**阻塞和非阻塞**
+
+- 阻塞和非阻塞关注的是**线程的状态**。
+- 阻塞调用是指调用结果返回之前，当前线程会被挂起。调用线程只有在得到结果之后才会恢复运行。
+- 非阻塞调用指在不能立刻得到结果之前，该调用不会阻塞当前线程。
+
 UNIX 系统下， IO 模型一共有 5 种：**同步阻塞 I/O**、**同步非阻塞 I/O**、**I/O 多路复用**、**信号驱动 I/O** 和**异步 I/O**。
 
-Java中3种常见的IO模型：BIO（Blocking I/O）、NIO、AIO
+Java中3种常见的IO模型：`BIO（Blocking I/O）、NIO、AIO`
 
 #### BIO(Blocking I/O)
 
@@ -547,7 +557,7 @@ Java 中的 `NIO` 于 Java 1.4 中引入，对应 `java.nio` 包，提供了 `Ch
 
 Java 中的 `NIO` 可以看作是 **I/O 多路复用模型**。
 
-**1、同步非阻塞模型**
+##### **1、同步非阻塞模型**
 
 <img src="Java.assets/bb174e22dbe04bb79fe3fc126aed0c61tplv-k3u1fbpfcp-watermark.png" alt="图源：《深入拆解Tomcat & Jetty》" style="zoom:50%;" />
 
@@ -557,7 +567,7 @@ Java 中的 `NIO` 可以看作是 **I/O 多路复用模型**。
 >
 > 缺点：**应用程序不断进行 I/O 系统调用轮询数据是否已经准备好的过程是十分消耗 CPU 资源的。**
 
-**2、I/O多路复用模型**
+##### **2、I/O多路复用模型**
 
 IO 多路复用模型中，线程首先发起 **select 调用**，询问内核数据是否准备就绪，等内核把数据准备好了，用户线程再发起 read 调用。read 调用的过程（数据从内核空间 -> 用户空间）还是阻塞的。
 
