@@ -66,7 +66,7 @@
 
 ## MySQL事务
 
-> `MySQL`的事务（Transaction）是数据库管理系统执行过程中的一个逻辑单位，它由一个或多个`SQL`语句组成，这些语句要么全部执行，要么全部不执行。事务的主要目的是确保数据的完整性和一致性，在并发操作中保持数据的正确状态。
+> `MySQL`的事务（Transaction）是数据库管理系统执行过程中的一个**逻辑单位**，它由一个或多个`SQL`语句组成，这些语句要么全部执行，要么全部不执行。事务的主要目的是确保数据的完整性和一致性，在并发操作中保持数据的正确状态。
 >
 > 事务具有以下四个关键特性，通常被称为`ACID特性`：
 >
@@ -75,24 +75,42 @@
 > 3. **隔离性（Isolation）**：在事务执行过程中，其他事务不能访问该事务的数据，直到该事务完成。这确保了并发执行的事务不会相互干扰。
 > 4. **持久性（Durability）**：一旦事务提交，则其结果就是永久性的，即使系统崩溃也不会丢失。
 >
-> 在`MySQL`中，特别是`InnoDB`存储引擎，事务得到了全面的支持。当你在`InnoDB`中执行一个事务时，可以包含多个`SQL`语句，这些语句要么全部成功，要么在发生错误时全部回滚（撤销）。这通过维护一个撤销日志（`undo log`）来实现，当事务需要回滚时，可以利用这个日志将数据恢复到事务开始之前的状态。
+> 在`MySQL`中，特别是`InnoDB`存储引擎，事务得到了全面的支持。当你在`InnoDB`中执行一个事务时，可以包含多个`SQL`语句，这些语句要么全部成功，要么在发生错误时全部回滚（撤销）。这通过维护一个**撤销日志**（`undo log`）来实现，当事务需要回滚时，可以利用这个日志将数据恢复到事务开始之前的状态。
 >
 > 此外，`MySQL`还提供了事务控制语句，如`COMMIT`和`ROLLBACK`，来显式地提交或回滚事务。`COMMIT`用于提交事务，即将事务中的修改永久保存到数据库中；而`ROLLBACK`则用于撤销事务中的修改，将数据库恢复到事务开始之前的状态。
 
+> SQL 标准定义了四个隔离级别：
+>
+> - **READ-UNCOMMITTED(读取未提交)** ：最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读或不可重复读。
+> - **READ-COMMITTED(读取已提交)** ：允许读取并发事务已经提交的数据，可以阻止脏读，但是幻读或不可重复读仍有可能发生。
+> - **REPEATABLE-READ(可重复读)** ：对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以阻止脏读和不可重复读，但幻读仍有可能发生。
+> - **SERIALIZABLE(可串行化)** ：最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防止脏读、不可重复读以及幻读。
+>
+> | 隔离级别                 | Lost Updates | Dirty Reads | Non-repeating Reads | Phantom Reads |
+> | ------------------------ | ------------ | ----------- | ------------------- | ------------- |
+> | READ-UNCOMMITTED（最低） |              |             |                     |               |
+> | READ-COMMITTED           |              | √           |                     |               |
+> | REPEATABLE-READ（默认）  | √            | √           | √                   |               |
+> | SERIALIZABLE（最高）     | √            | √           | √                   | √             |
+>
+
 ## 非聚簇索引的回表机制？
 
-> 非聚簇索引的回表机制是数据库查询中的一个重要概念，尤其在MySQL的InnoDB存储引擎中。以下是对非聚簇索引回表机制的详细解释：
+> 非聚簇索引的回表机制是数据库查询中的一个重要概念，尤其在`MySQL`的`InnoDB`存储引擎中。以下是对非聚簇索引回表机制的详细解释：
 >
-> 首先，我们需要理解聚簇索引和非聚簇索引的基本区别。聚簇索引的叶子节点存储的是行记录，也就是说，数据与索引是存储在一起的。而非聚簇索引的叶子节点存储的则是主键值，也就是说，数据和索引是分开的。
+> 首先，我们需要理解聚簇索引和非聚簇索引的基本区别。
+>
+> - **聚簇索引**的叶子节点存储的是**行记录**，也就是说，数据与索引是存储在一起的。
+> - **非聚簇索引**的叶子节点存储的则是**主键值**，也就是说，数据和索引是分开的。
 >
 > 当我们使用非聚簇索引进行查询时，查询过程大致如下：
 >
 > 1. 数据库首先在非聚簇索引中找到满足查询条件的数据行的主键值。
 > 2. 然后，根据这些主键值，数据库需要再次回到聚簇索引（通常是主键索引）中查找相应的数据行。这个过程就像是根据一个地址（主键值）去找到实际的房屋（数据行）。
 >
-> 这个从非聚簇索引回到聚簇索引查找数据行的过程，就是所谓的“回表”。回表操作会增加额外的IO操作和时间开销，因为需要再次访问数据表。在大量数据或者频繁进行回表查询的场景下，这会对查询性能产生显著影响。
+> 这个**从非聚簇索引回到聚簇索引查找数据行的过程，就是所谓的“回表”**。回表操作会增加额外的IO操作和时间开销，因为需要再次访问数据表。在大量数据或者频繁进行回表查询的场景下，这会对查询性能产生显著影响。
 >
-> 为了避免频繁的回表查询，一种优化策略是使用覆盖索引。覆盖索引是指查询只需要通过索引就可以返回所需要的数据，而无需回表去访问实际的数据行。这可以显著提高查询效率。
+> 为了避免频繁的回表查询，一种优化策略是**使用覆盖索引**。覆盖索引是指查询只需要通过索引就可以返回所需要的数据，而无需回表去访问实际的数据行。这可以显著提高查询效率。
 
 ## 哪些情况下索引会失效？
 
@@ -113,94 +131,107 @@
 
 ## **联合索引 abc，a=1,c=1/b=1,c=1/a=1,c=1,b=1走不走索引**
 
-> 示例 1（a=1,c=1）：
+> 示例 1`（a=1,c=1）`：
 >
-> ```
-> EXPLAIN SELECT * FROM tbn WHERE A=1 AND C=1\G
-> ```
->
-> ![图片](Java面试八股文.assets/640-171084821538939.png)
->
-> key 是 idx_abc，表明 a=1,c=1 会使用联合索引。但因为缺少了 B 字段的条件，所以 MySQL 可能无法利用索引来直接定位到精确的行，而是使用索引来缩小搜索范围。
->
-> 最终，MySQL 需要检查更多的行（rows: 3）来找到满足所有条件的结果集，但总体来说，使用索引明显比全表扫描要高效得多。
->
-> 示例 2（b=1,c=1）：
->
-> ```
-> EXPLAIN SELECT * FROM tbn WHERE B=1 AND C=1\G
+> ```sql
+> EXPLAIN SELECT * FROM tbn WHERE A=1 AND C=1
 > ```
 >
-> ![图片](Java面试八股文.assets/640-171084821539040.png)
+> <img src="Java面试八股文.assets/640-171084821538939.png" alt="图片" style="zoom:50%;" />
 >
-> key 是 NULL，表明 b=1,c=1 不会使用联合索引。这是因为查询条件中涉及的字段 B 和 C 没有遵循之前定义的联合索引 idx_abc（A、B、C 顺序）的最左前缀原则。
+> key 是 `idx_abc`，表明 `a=1,c=1` 会使用联合索引。但因为缺少了 B 字段的条件，所以 `MySQL` 可能无法利用索引来直接定位到精确的行，而是使用索引来缩小搜索范围。
 >
-> 在 idx_abc 索引中，A 是最左边的列，但是查询没有包含 A，因此 MySQL 无法利用这个索引。
+> 最终，`MySQL` 需要检查更多的行（rows: 3）来找到满足所有条件的结果集，但总体来说，使用索引明显比全表扫描要高效得多。
 >
-> 示例 3（a=1,c=1,b=1）：
+> 示例 2`（b=1,c=1）`：
 >
+> ```sql
+> EXPLAIN SELECT * FROM tbn WHERE B=1 AND C=1
 > ```
-> EXPLAIN SELECT * FROM tbn WHERE A=1 AND C=1 AND B=1\G
+>
+> <img src="Java面试八股文.assets/640-171084821539040.png" alt="图片" style="zoom:50%;" />
+>
+> key 是 NULL，表明 b=1,c=1 不会使用联合索引。这是因为查询条件中涉及的字段 B 和 C 没有遵循之前定义的联合索引 `idx_abc`（A、B、C 顺序）的最左前缀原则。
+>
+> 在 `idx_abc` 索引中，A 是最左边的列，但是查询没有包含 A，因此 `MySQL` 无法利用这个索引。
+>
+> 示例 3`（a=1,c=1,b=1）`：
+>
+> ```sql
+> EXPLAIN SELECT * FROM tbn WHERE A=1 AND C=1 AND B=1
 > ```
 >
-> ![图片](Java面试八股文.assets/640-171084821539141.png)
+> <img src="Java面试八股文.assets/640-171084821539141.png" alt="图片" style="zoom:50%;" />
 >
-> key 是 idx_abc，表明 a=1,c=1,b=1 会使用联合索引。
+> key 是 `idx_abc`，表明 `a=1,c=1,b=1` 会使用联合索引。
 >
-> 并且 rows=1，因为查询条件包含了联合索引 idx_abc 中所有列的等值条件，并且条件的顺序与索引列的顺序相匹配，使得查询能够准确、快速地定位到目标数据。
+> 并且 rows=1，因为查询条件包含了联合索引 `idx_abc` 中所有列的等值条件，并且条件的顺序与索引列的顺序相匹配，使得查询能够准确、快速地定位到目标数据。
 
 # Java SE
 
-## ArrayList 和 LinkedList 的时间复杂度
 
-> ①、由于 ArrayList 是基于数组实现的，所以 `get(int index)` 可以直接通过数组下标获取，时间复杂度是 O(1)；LinkedList 是基于链表实现的，`get(int index)` 需要遍历链表，时间复杂度是 O(n)。
+
+## `ArrayList` 和 `LinkedList` 的时间复杂度
+
+> **①查询**
 >
-> 当然，`get(E element)` 这种查找，两种集合都需要遍历通过 equals 比较获取元素，所以时间复杂度都是 O(n)。
+> 基于索引
 >
-> ②、ArrayList 如果增删的是数组的尾部，直接插入或者删除就可以了，时间复杂度是 O(1)；如果 add 的时候涉及到扩容，时间复杂度会提升到 O(n)。
+> -  `ArrayList` 是基于数组实现的，所以 `get(int index)` 可以直接通过数组下标获取，时间复杂度是 O(1)；
+> - `LinkedList` 是基于链表实现的，`get(int index)` 需要遍历链表，时间复杂度是 O(n)。
 >
-> 但如果插入的是中间的位置，就需要把插入位置后的元素向前或者向后移动，甚至还有可能触发扩容，效率就会低很多，O(n)。
+> 基于元素：`get(E element)` 这种查找，两种集合都需要遍历通过 equals 比较获取元素，所以时间复杂度都是 O(n)。
 >
-> LinkedList 因为是链表结构，插入和删除只需要改变前置节点、后置节点和插入节点的引用就行了，不需要移动元素。
+> **②增删（头尾、中间）**
 >
-> 如果是在链表的头部插入或者删除，时间复杂度是 O(1)；如果是在链表的中间插入或者删除，时间复杂度是 O(n)，因为需要遍历链表找到插入位置；如果是在链表的尾部插入或者删除，时间复杂度是 O(1)。
+> `ArrayList`
+>
+> - 尾部：`ArrayList` 如果增删的是数组的尾部，直接插入或者删除就可以了，时间复杂度是 O(1)；如果 add 的时候涉及到扩容，时间复杂度会提升到 O(n)。
+>
+> - 中间：如果插入的是中间的位置，就需要把插入位置后的元素向前或者向后移动，甚至还有可能触发扩容，效率就会低很多，O(n)。
+>
+> `LinkedList`
+>
+> - `LinkedList` 因为是链表结构，插入和删除只需要改变前置节点、后置节点和插入节点的引用就行了，不需要移动元素。
+>
+> - 如果是在链表的头部插入或者删除，时间复杂度是 O(1)；如果是在链表的中间插入或者删除，时间复杂度是 O(n)，因为需要遍历链表找到插入位置；如果是在链表的尾部插入或者删除，时间复杂度是 O(1)。
 >
 > <img src="Java面试八股文.assets/640.png" alt="图片" style="zoom:50%;" />
 >
 > <img src="Java面试八股文.assets/640-17108475570251.png" alt="图片" style="zoom:50%;" />
 >
-> 注意，这里有个陷阱，LinkedList 更利于增删不是体现在时间复杂度上，因为二者增删的时间复杂度都是 O(n)，都需要遍历列表；而是体现在增删的效率上，因为 LinkedList 的增删只需要改变引用，而 ArrayList 的增删可能需要移动元素。
+> 注意，这里有个陷阱，`LinkedList` 更利于增删不是体现在时间复杂度上，因为二者增删的时间复杂度都是 O(n)，都需要遍历列表；而是体现在增删的效率上，因为 `LinkedList` 的增删只需要改变引用，而 `ArrayList` 的增删可能需要移动元素。
 
-## HashSet 和 ArrayList 的区别
+## `HashSet` 和 `ArrayList` 的区别
 
-> - ArrayList 是基于动态数组实现的，HashSet 是基于 HashMap 实现的。
-> - ArrayList 允许重复元素和 null 值，可以有多个相同的元素；HashSet 保证每个元素唯一，不允许重复元素，基于元素的 hashCode 和 equals 方法来确定元素的唯一性。
-> - ArrayList 保持元素的插入顺序，可以通过索引访问元素；HashSet 不保证元素的顺序，元素的存储顺序依赖于哈希算法，并且可能随着元素的添加或删除而改变。
+> - `ArrayList` 是基于动态数组实现的，`HashSet` 是基于 `HashMap` 实现的。
+> - `ArrayList` 允许重复元素和 null 值，可以有多个相同的元素；`HashSet` 保证每个元素唯一，不允许重复元素，基于元素的 `hashCode` 和 `equals` 方法来确定元素的唯一性。
+> - `ArrayList` 保持元素的插入顺序，可以通过索引访问元素；`HashSet` 不保证元素的顺序，元素的存储顺序依赖于哈希算法，并且可能随着元素的添加或删除而改变。
 
-## HashSet 怎么判断元素重复，重复了是否 put
+## `HashSet` 怎么判断元素重复，重复了是否 put
 
-> HashSet 的 add 方法是通过调用 HashMap 的 put 方法实现的：
+> `HashSet` 的 add 方法是通过调用 `HashMap` 的 put 方法实现的：
 >
-> ```
+> ```java
 > public boolean add(E e) {
->     return map.put(e, PRESENT)==null;
+>        return map.put(e, PRESENT)==null;
 > }
 > ```
 >
-> 所以 HashSet 判断元素重复的逻辑底层依然是 HashMap 的底层逻辑：
+> 所以 `HashSet` 判断元素重复的逻辑底层依然是 `HashMap` 的底层逻辑：
 >
-> HashMap插入数据流程图：
+> `HashMap`插入数据流程图：
 >
 > <img src="Java面试八股文.assets/640-17108476035166.jpeg" alt="图片" style="zoom:80%;" />
 >
-> HashMap 在插入元素时，通常需要三步：
+> `HashMap` 在插入元素时，通常需要三步：
 >
 > 第一步，通过 hash 方法计算 key 的哈希值。
 >
 > ```java
 > static final int hash(Object key) {
->     int h;
->     return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+>        int h;
+>        return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
 > }
 > ```
 >
@@ -245,7 +276,7 @@
 > }
 > ```
 >
-> 也就是说，HashSet 通过元素的哈希值来判断元素是否重复，如果重复了，会覆盖原来的值。
+> 也就是说，`HashSet` 通过元素的哈希值来判断元素是否重复，如果重复了，会覆盖原来的值。
 >
 > ```java
 > if (e != null) { // existing mapping for key
@@ -259,7 +290,7 @@
 
 ## hashcode 和 equals 方法只重写一个行不行，只重写 equals 没重写 hashcode，map put 的时候会发生什么
 
-> #### 什么是 hashCode 方法？
+> #### 什么是 `hashCode` 方法？
 >
 > `hashCode()` 方法的作⽤是获取哈希码，它会返回⼀个 int 整数，定义在 Object 类中， 是一个本地⽅法。
 >
@@ -267,11 +298,11 @@
 > public native int hashCode();
 > ```
 >
-> #### 为什么要有 hashCode 方法？
+> #### 为什么要有 `hashCode` 方法？
 >
-> hashCode 方法主要用来获取对象的哈希码，哈希码是由对象的内存地址或者对象的属性计算出来的，它是⼀个 int 类型的整数，通常是不会重复的，因此可以用来作为键值对的建，以提高查询效率。
+> `hashCode` 方法主要用来获取对象的哈希码，哈希码是由对象的内存地址或者对象的属性计算出来的，它是⼀个 int 类型的整数，通常是不会重复的，因此可以用来作为键值对的建，以提高查询效率。
 >
-> 例如 HashMap 中的 key 就是通过 hashCode 来实现的，通过调用 hashCode 方法获取键的哈希码，并将其与右移 16 位的哈希码进行异或运算。
+> 例如 `HashMap` 中的 key 就是通过 `hashCode` 来实现的，通过调用 `hashCode` 方法获取键的哈希码，并将其与右移 16 位的哈希码进行异或运算。
 >
 > ```java
 > static final int hash(Object key) {
@@ -280,23 +311,23 @@
 > }
 > ```
 >
-> #### 为什么重写 quals 时必须重写 hashCode ⽅法？
+> #### 为什么重写 `quals` 时必须重写 `hashCode` ⽅法？
 >
-> 维护 `equals()`和 `hashCode()`之间的一致性是至关重要的，因为基于哈希的集合类（如 HashSet、HashMap、Hashtable 等）依赖于这一点来正确存储和检索对象。
+> 维护 `equals()`和 `hashCode()`之间的一致性是至关重要的，因为基于哈希的集合类（如 `HashSet`、`HashMap`、`Hashtable` 等）依赖于这一点来正确存储和检索对象。
 >
 > 具体地说，这些集合通过对象的哈希码将其存储在不同的“桶”中（底层数据结构是数组，哈希码用来确定下标），当查找对象时，它们使用哈希码确定在哪个桶中搜索，然后通过 `equals()`方法在桶中找到正确的对象。
 >
 > 如果重写了 `equals()`方法而没有重写 `hashCode()`方法，那么被认为相等的对象可能会有不同的哈希码，从而导致无法在集合中正确处理这些对象。
 >
-> #### 为什么两个对象有相同的 hashcode 值，它们也不⼀定相等？
+> #### 为什么两个对象有相同的 `hashcode` 值，它们也不⼀定相等？
 >
-> 这主要是由于哈希码（hashCode）的本质和目的所决定的。
+> 这主要是由于哈希码（`hashCode`）的本质和目的所决定的。
 >
 > 哈希码是通过哈希函数将对象中映射成一个整数值，其主要目的是在哈希表中快速定位对象的存储位置。
 >
-> 由于哈希函数将一个较大的输入域映射到一个较小的输出域，不同的输入值（即不同的对象）可能会产生相同的输出值（即相同的哈希码）。
+> 由于哈希函数将**一个较大的输入域映射到一个较小的输出域**，不同的输入值（即不同的对象）可能会产生相同的输出值（即相同的哈希码）。
 >
-> 这种情况被称为哈希冲突。当两个不相等的对象发生哈希冲突时，它们会有相同的 hashCode。
+> 这种情况被称为哈希冲突。当两个不相等的对象发生哈希冲突时，它们会有相同的 `hashCode`。
 >
 > 为了解决哈希冲突的问题，哈希表在处理键时，不仅会比较键对象的哈希码，还会使用 equals 方法来检查键对象是否真正相等。如果两个对象的哈希码相同，但通过 equals 方法比较结果为 false，那么这两个对象就不被视为相等。
 >
@@ -308,7 +339,7 @@
 >
 > #### 只重写 equals 没重写 hashcode，map put 的时候会发生什么?
 >
-> 如果只重写 equals 方法，没有重写 hashcode 方法，那么会导致 equals 相等的两个对象，hashcode 不相等，这样的话，这两个对象会被放到不同的桶中，这样就会导致 get 的时候，找不到对应的值。
+> 如果只重写 `equals` 方法，没有重写 `hashcode` 方法，那么会导致 equals 相等的两个对象，`hashcode` 不相等，这样的话，这两个对象会被放到不同的桶中，这样就会导致 get 的时候，找不到对应的值。
 
 ## **Java 编译时异常和运行时异常的区别**
 
@@ -316,19 +347,19 @@
 >
 > ![图片](Java面试八股文.assets/640-171084781781227.png)
 >
-> `Throwable` 是 Java 语言中所有错误和异常的基类。它有两个主要的子类：Error 和 Exception，这两个类分别代表了 Java 异常处理体系中的两个分支。
+> `Throwable` 是 Java 语言中所有错误和异常的基类。它有两个主要的子类：`Error 和 Exception`，这两个类分别代表了 Java 异常处理体系中的两个分支。
 >
-> Error 类代表那些严重的错误，这类错误通常是程序无法处理的。比如，OutOfMemoryError 表示内存不足，StackOverflowError 表示栈溢出。这些错误通常与 JVM 的运行状态有关，一旦发生，应用程序通常无法恢复。
+> - `Error` 类代表那些严重的错误，这类错误通常是程序无法处理的。比如，`OutOfMemoryError` 表示内存不足，`StackOverflowError` 表示栈溢出。这些错误通常与 `JVM` 的运行状态有关，一旦发生，应用程序通常无法恢复。
 >
-> Exception 类代表程序可以处理的异常。它分为两大类：编译时异常（Checked Exception）和运行时异常（Runtime Exception）。
+> - `Exception` 类代表程序可以处理的异常。它分为两大类：编译时异常（`Checked Exception`）和运行时异常（`Runtime Exception`）。
 >
-> ①、编译时异常（Checked Exception）：这类异常在编译时必须被显式处理（捕获或声明抛出）。
+> ①、编译时异常（`Checked Exception`）：这类异常在编译时必须被显式处理（捕获或声明抛出）。
 >
-> 如果方法可能抛出某种编译时异常，但没有捕获它（try-catch）或没有在方法声明中用 throws 子句声明它，那么编译将不会通过。例如：IOException、SQLException 等。
+> 如果方法可能抛出某种编译时异常，但没有捕获它（try-catch）或没有在方法声明中用 throws 子句声明它，那么编译将不会通过。例如：`IOException`、`SQLException` 等。
 >
-> ②、运行时异常（Runtime Exception）：这类异常在运行时抛出，它们都是 RuntimeException 的子类。对于运行时异常，Java 编译器不要求必须处理它们（即不需要捕获也不需要声明抛出）。
+> ②、运行时异常（Runtime Exception）：这类异常在运行时抛出，它们都是 `RuntimeException` 的子类。对于运行时异常，Java 编译器不要求必须处理它们（即不需要捕获也不需要声明抛出）。
 >
-> 运行时异常通常是由程序逻辑错误导致的，如 NullPointerException、IndexOutOfBoundsException 等。
+> 运行时异常通常是由程序逻辑错误导致的，如 `NullPointerException`、`IndexOutOfBoundsException` 等。
 
 ## **return 先执行还是 finally 先执行**
 
@@ -385,19 +416,19 @@
 >
 > 隔离性主要是为了解决事务并发执行时可能出现的问题，如脏读、不可重复读、幻读等。
 >
-> 数据库系统通过事务隔离级别（如读未提交、读已提交、可重复读、串行化）来实现事务的隔离性。
+> 数据库系统通过事务隔离级别（如**读未提交、读已提交、可重复读、串行化**）来实现事务的隔离性。
 >
 > #### 持久性：
 >
 > 持久性确保事务一旦提交，它对数据库所做的更改就是永久性的，即使发生系统崩溃，数据库也能恢复到最近一次提交的状态。通常，持久性是通过数据库的恢复和日志机制来实现的，确保提交的事务更改不会丢失。
 
-## **JDBC 的执行步骤**
+## **`JDBC` 的执行步骤**
 
-> Java 数据库连接（JDBC）是一个用于执行 SQL 语句的 Java API，它为多种关系数据库提供了统一访问的机制。使用 JDBC 操作数据库通常涉及以下步骤：
+> Java 数据库连接（`JDBC`）是一个用于执行 `SQL` 语句的 `Java API`，它为多种关系数据库提供了统一访问的机制。使用 `JDBC` 操作数据库通常涉及以下步骤：
 >
 > #### 1. 加载数据库驱动
 >
-> 在与数据库建立连接之前，首先需要通过`Class.forName()`方法加载对应的数据库驱动。这一步确保 JDBC 驱动注册到了`DriverManager`类中。
+> 在与数据库建立连接之前，首先需要通过`Class.forName()`方法加载对应的数据库驱动。这一步确保 `JDBC` 驱动注册到了`DriverManager`类中。
 >
 > ```java
 > Class.forName("com.mysql.cj.jdbc.Driver");
@@ -429,7 +460,7 @@
 >
 > #### 4. 执行 SQL 语句
 >
-> 使用`Statement`或`PreparedStatement`对象执行 SQL 语句。
+> 使用`Statement`或`PreparedStatement`对象执行 `SQL` 语句。
 >
 > 执行查询（SELECT）语句时，使用`executeQuery()`方法，它返回`ResultSet`对象；
 >
@@ -468,19 +499,19 @@
 >
 > #### 总结
 >
-> 使用 JDBC 操作数据库的过程包括加载驱动、建立连接、创建执行语句、执行 SQL 语句、处理结果集和关闭资源。
+> 使用 `JDBC` 操作数据库的过程包括加载驱动、建立连接、创建执行语句、执行 SQL 语句、处理结果集和关闭资源。
 >
-> 在 Java 开发中，通常会使用 JDBC 模板库（如 Spring 的 JdbcTemplate）或 ORM 框架（如 Hibernate、MyBatis、MyBatis-Plus）来简化数据库操作和资源管理。
+> 在 Java 开发中，通常会使用 `JDBC` 模板库（如 Spring 的 `JdbcTemplate`）或 `ORM` 框架（如 `Hibernate`、`MyBatis`、`MyBatis-Plus`）来简化数据库操作和资源管理。
 
 ## **创建连接拿到的是什么对象**
 
-> 在 JDBC 的执行步骤中，创建连接后拿到的对象是`java.sql.Connection`对象。这个对象是 JDBC API 中用于表示数据库连接的接口，它提供了执行 SQL 语句、管理事务等一系列操作的方法。
+> 在 `JDBC` 的执行步骤中，创建连接后拿到的对象是`java.sql.Connection`对象。这个对象是 `JDBC API` 中用于表示数据库连接的接口，它提供了执行 `SQL` 语句、管理事务等一系列操作的方法。
 >
 > `Connection`对象代表了应用程序和数据库的一个连接会话。
 >
 > 通过调用`DriverManager.getConnection()`方法并传入数据库的 URL、用户名和密码等信息来获得这个对象。
 >
-> 一旦获得`Connection`对象，就可以使用它来创建执行 SQL 语句的`Statement`、`PreparedStatement`和`CallableStatement`对象，以及管理事务等。
+> 一旦获得`Connection`对象，就可以使用它来创建执行 `SQL` 语句的`Statement`、`PreparedStatement`和`CallableStatement`对象，以及管理事务等。
 
 ## **statement 和 preparedstatement 的区别**
 
@@ -488,22 +519,172 @@
 >
 > #### 1. 预编译
 >
-> ①、**Statement**：每次执行`Statement`对象的`executeQuery`或`executeUpdate`方法时，SQL 语句在数据库端都需要重新编译和执行。这适用于一次性执行的 SQL 语句。
+> ①**`Statement`**：每次执行`Statement`对象的`executeQuery`或`executeUpdate`方法时，`SQL` 语句在数据库端都需要重新编译和执行。这适用于一次性执行的 `SQL` 语句。
 >
-> ②、**PreparedStatement**：代表预编译的 SQL 语句的对象。这意味着 SQL 语句在`PreparedStatement`对象创建时就被发送到数据库进行预编译。
->
-> 之后，可以通过设置参数值来多次高效地执行这个 SQL 语句。这不仅减少了数据库编译 SQL 语句的开销，也提高了性能，尤其是对于重复执行的 SQL 操作。
+> ②**`PreparedStatement`**：代表预编译的 `SQL` 语句的对象。这意味着 `SQL` 语句在`PreparedStatement`对象创建时就被发送到数据库进行预编译。之后，可以通过设置参数值来多次高效地执行这个 `SQL` 语句。这不仅减少了数据库编译 `SQL` 语句的开销，也提高了性能，尤其是对于重复执行的 `SQL` 操作。
 >
 > #### 2. 参数化查询
 >
-> - **Statement**：不支持参数化查询。如果需要在 SQL 语句中插入变量，通常需要通过字符串拼接的方式来实现，这会增加 SQL 注入攻击的风险。
-> - **PreparedStatement**：支持参数化查询，即可以在 SQL 语句中使用问号（?）作为参数占位符。通过`setXxx`方法（如`setString`、`setInt`）设置参数，可以有效防止 SQL 注入。
->
+> - **`Statement`**：不支持参数化查询。如果需要在 `SQL` 语句中插入变量，通常需要通过字符串拼接的方式来实现，这会增加 `SQL` 注入攻击的风险。
+>- **`PreparedStatement`**：支持参数化查询，即可以在 `SQL` 语句中使用问号（?）作为参数占位符。通过`setXxx`方法（如`setString`、`setInt`）设置参数，可以有效防止 `SQL` 注入。
+> 
 > 总的来说，`PreparedStatement`相比`Statement`有着更好的性能和更高的安全性，是执行 SQL 语句的首选方式，尤其是在处理含有用户输入的动态查询时。
 
+## HashMap是如何进行扩容的
+
+> `JDK1.7`
+>
+> - 先生成长度是老数组2倍的新数组
+> - 遍历老数组中桶中的每个元素
+> - 根据key计算新数组的索引下标
+> - 按照索引将元素添加到新数组中去；
+> - 所有元素转移完之后，将新数组赋值给`Hashmap`对象的table属性
+>
+> 注意：`JDK1.7`多线程环境下扩容会产生**链表成环**问题，引发严重的性能问题，`JDK1.8`中采用尾插法&链表重新链接解决了此问题
+>
+> `JDK1.8`
+>
+> - 先生成长度是老数组2倍的新数组
+> - 遍历老数组中桶中的每个元素
+> - 如果桶节点没有形成链表，计算出新数组的索引位置，直接转移到新数组
+> - 如果桶节点已经形成链表
+>   - 将链表重新链接，按照低位区和高位区重新分配到新数组；
+> - 如果桶节点已经形成红黑树
+>   - 调用split方法将红黑树重新切分低位区和高位区2个链表
+>   - 判断低位区和高位区链表的长度，链表长度小于6，则会进行取消树化的处理，否则会将新生成的链表重新树化；
+> - 所有元素转移完之后，将新数组赋值给`Hashmap`对象的table属性
+
+## 什么是Java中的SPI机制
+
+> SPI 即 Service Provider Interface ，字面意思就是：“服务提供者的接口”，我的理解是：专门提供给服务提供者或者扩展框架功能的开发者去使用的一个接口。
+>
+> SPI 将服务接口和具体的服务实现分离开来，将服务调用方和服务实现者解耦，能够提升程序的扩展性、可维护性。修改或者替换服务实现并不需要修改调用方。
+>
+> 很多框架都使用了 Java 的 SPI 机制，比如：Spring 框架、数据库加载驱动、日志接口、以及 Dubbo 的扩展实现等等。
+>
+> 具体实现
+>
+> 1、定义接口
+>
+> ```java
+> public interface SayService {
+>     void say();
+> }
+> ```
+>
+> 2、定义实现类
+>
+> ```java
+> public class SayChinese implements SayService{
+>     @Override
+>     public void say() {
+>         System.out.println("你好");
+>     }
+> }
+> 
+> public class SayEnglish implements SayService{
+>     @Override
+>     public void say() {
+>         System.out.println("hello");
+>     }
+> }
+> ```
+>
+> 3、配置：在resources的META-INF.services目录下根据接口的全限定名创建文件
+>
+> ```
+> org.example.spi.SayChinese
+> org.example.spi.SayEnglish
+> ```
+>
+> 4、使用`ServiceLoader`加载
+>
+> ```java
+> public static void main(String[] args) {
+>     ServiceLoader<SayService> load = ServiceLoader.load(SayService.class);
+> 
+>     for(SayService sayService: load){
+>         sayService.say();
+>     }
+> 
+>     Iterator<SayService> iterator = load.iterator();
+>     while (iterator.hasNext()){
+>         SayService sayService = (SayService) iterator.next();
+>         sayService.say();
+>     }
+> }
+> 
+> 你好
+> hello
+> 你好
+> hello
+> ```
+>
+> `ServiceLoader`详解
+>
+> `ServiceLoader` 是 JDK 提供的一个工具类， 位于`package java.util;`包下。
+>
+> ```java
+> public final class ServiceLoader<S> implements Iterable<S>{ xxx...}
+> 
+> public static <S> ServiceLoader<S> load(Class<S> service) {
+>     ClassLoader cl = Thread.currentThread().getContextClassLoader();
+>     return ServiceLoader.load(service, cl);
+> }
+> 
+> public static <S> ServiceLoader<S> load(Class<S> service,
+>                                         ClassLoader loader) {
+>     return new ServiceLoader<>(service, loader);
+> }
+> 
+> private ServiceLoader(Class<S> svc, ClassLoader cl) {
+>     service = Objects.requireNonNull(svc, "Service interface cannot be null");
+>     loader = (cl == null) ? ClassLoader.getSystemClassLoader() : cl;
+>     acc = (System.getSecurityManager() != null) ? AccessController.getContext() : null;
+>     reload();
+> }
+> 
+> public void reload() {
+>     providers.clear();
+>     lookupIterator = new LazyIterator(service, loader);
+> }
+> ```
+>
+> 根据代码的调用顺序，在 `reload()` 方法中是通过一个内部类 `LazyIterator` 实现的。先继续往下面看。
+>
+> `ServiceLoader` 实现了 `Iterable` 接口的方法后，具有了迭代的能力，在这个 `iterator` 方法被调用时，首先会在 `ServiceLoader` 的 `Provider` 缓存中进行查找，如果缓存中没有命中那么则在 `LazyIterator` 中进行查找。
+>
+> ```java
+> 
+> public Iterator<S> iterator() {
+>     return new Iterator<S>() {
+> 
+>         Iterator<Map.Entry<String, S>> knownProviders
+>                 = providers.entrySet().iterator();
+> 
+>         public boolean hasNext() {
+>             if (knownProviders.hasNext())
+>                 return true;
+>             return lookupIterator.hasNext(); // 调用 LazyIterator
+>         }
+> 
+>         public S next() {
+>             if (knownProviders.hasNext())
+>                 return knownProviders.next().getValue();
+>             return lookupIterator.next(); // 调用 LazyIterator
+>         }
+> 
+>         public void remove() {
+>             throw new UnsupportedOperationException();
+>         }
+> 
+>     };
+> }
+> ```
+>
+> 
+
 # JVM
-
-
 
 > JVM，也就是 Java 虚拟机，它是 Java 实现跨平台的基石。
 >
@@ -519,19 +700,21 @@
 
 ## **堆和栈的区别是什么**
 
-> JVM 的内存区域可以粗暴地划分为`堆`和`栈`，当然了，按照 Java 的虚拟机规范，可以再细分为`程序计数器`、`虚拟机栈`、`本地方法栈`、`堆`、`方法区`等。
+> `JVM` 的内存区域可以粗暴地划分为`堆`和`栈`，当然了，按照 Java 的虚拟机规范，可以再细分为`程序计数器`、`虚拟机栈`、`本地方法栈`、`堆`、`方法区`等。
 >
-> ![图片](Java面试八股文.assets/640-171084771583915.png)三分恶面渣逆袭：Java虚拟机运行时数据区
+> **Java虚拟机运行时数据区**
+>
+> <img src="Java面试八股文.assets/640-171084771583915.png" alt="图片" style="zoom:50%;" />
 >
 > 其中`方法区`和`堆`是线程共享区，`虚拟机栈`、`本地方法栈`和`程序计数器`是线程私有的。
 >
 > #### Java 虚拟机栈
 >
-> Java 虚拟机栈（Java Virtual Machine Stack），通常指的就是“栈”，它的生命周期与线程相同。
+> Java 虚拟机栈（`Java Virtual Machine Stack`），通常指的就是“栈”，它的生命周期与线程相同。
 >
-> Java 虚拟机栈（JVM 栈）中是一个个栈帧，每个栈帧对应一个被调用的方法。当线程执行一个方法时，会创建一个对应的栈帧，并将栈帧压入栈中。当方法执行完毕后，将栈帧从栈中移除。
+> Java 虚拟机栈（`JVM` 栈）中是一个个栈帧，每个栈帧对应一个被调用的方法。当线程执行一个方法时，会创建一个对应的栈帧，并将栈帧压入栈中。当方法执行完毕后，将栈帧从栈中移除。
 >
-> ![图片](Java面试八股文.assets/640-171084771583916.png)三分恶面渣逆袭：Java虚拟机栈
+> <img src="Java面试八股文.assets/640-171084771583916.png" alt="图片" style="zoom:50%;" />
 >
 > #### 本地方法栈
 >
@@ -543,11 +726,11 @@
 >
 > <img src="Java面试八股文.assets/640-171084771583917.png" alt="图片" style="zoom:50%;" />
 >
-> 以前，Java 中“几乎”所有的对象都会在堆中分配，但随着 JIT 编译器的发展和逃逸技术的逐渐成熟，所有的对象都分配到堆上渐渐变得不那么“绝对”了。
+> 以前，Java 中“几乎”所有的对象都会在堆中分配，但随着 `JIT` 编译器的发展和逃逸技术的逐渐成熟，所有的对象都分配到堆上渐渐变得不那么“绝对”了。
 >
-> 从 JDK 7 开始，Java 虚拟机已经默认开启逃逸分析了，意味着如果某些方法中的对象引用没有被返回或者未被外面使用（也就是未逃逸出去），那么对象可以直接在栈上分配内存。
+> 从 `JDK 7` 开始，Java 虚拟机已经默认开启逃逸分析了，意味着如果某些方法中的对象引用没有被返回或者未被外面使用（也就是未逃逸出去），那么对象可以直接在栈上分配内存。
 >
-> Java 堆是垃圾收集器管理的内存区域，因此一些资料中它也被称作“GC 堆”（Garbage Collected Heap）。
+> Java 堆是垃圾收集器管理的内存区域，因此一些资料中它也被称作“`GC` 堆”（Garbage Collected Heap）。
 >
 > 从回收内存的角度来看，由于垃圾收集器大部分都是基于分代收集理论设计的，所以 Java 堆中经常会出现`新生代`、`老年代`、`Eden空间`、`From Survivor空间`、`To Survivor空间`等名词。
 >
@@ -557,11 +740,11 @@
 >
 > 总结来说：堆属于线程共享的内存区域，几乎所有的对象都在对上分配，生命周期不由单个方法调用所决定，可以在方法调用结束后继续存在，直到不在被任何变量引用，然后被垃圾收集器回收。
 >
-> 栈就是前面提到的 JVM 栈（主要存储局部变量、方法参数、对象引用等），属于线程私有，通常随着方法调用的结束而消失，也就无需进行垃圾收集。
+> 栈就是前面提到的 `JVM` 栈（主要存储局部变量、方法参数、对象引用等），属于线程私有，通常随着方法调用的结束而消失，也就无需进行垃圾收集。
 
 ## **垃圾回收器的作用是什么**
 
-> 垃圾回收器的核心作用是自动管理Java应用程序的运行时内存。它负责识别哪些内存是不再被应用程序使用的（即“垃圾”），并释放这些内存以便重新使用。
+> 垃圾回收器的核心作用是**自动管理Java应用程序的运行时内存**。它负责识别哪些内存是不再被应用程序使用的（即“垃圾”），并释放这些内存以便重新使用。
 >
 > 这一过程减少了程序员手动管理内存的负担，降低了内存泄漏和溢出错误的风险。
 
@@ -569,7 +752,7 @@
 
 > 在 Java 中，和内存相关的问题主要有两种，内存溢出和内存泄漏。
 >
-> - **内存溢出**（Out Of Memory）：就是申请内存时，JVM 没有足够的内存空间。通俗说法就是去蹲坑发现坑位满了。
+> - **内存溢出**（Out Of Memory）：就是申请内存时，`JVM` 没有足够的内存空间。通俗说法就是去蹲坑发现坑位满了。
 > - **内存泄露**（Memory Leak）：就是申请了内存，但是没有释放，导致内存空间浪费。通俗说法就是有人占着茅坑不拉屎。
 >
 > 内存泄漏是内在病源，外在病症表现可能有：
@@ -577,20 +760,20 @@
 > - CPU 使用率飙升，甚至到 100%
 > - 应用程序抛出 `OutOfMemoryError` 错误
 
-# MQ
+# `MQ`
 
-## MQ幂等性
+## `MQ`幂等性
 
-## MQ如何保证消息一定被消费
+## `MQ`如何保证消息一定被消费
 
-> MQ（消息队列）是一种用于在分布式系统中进行异步通信的机制。为了保证消息一定被消费，MQ 通常会采用一系列机制和技术。以下是一些常见的方法：
+> `MQ`（消息队列）是一种用于在分布式系统中进行异步通信的机制。为了保证消息一定被消费，`MQ` 通常会采用一系列机制和技术。以下是一些常见的方法：
 >
-> 1. **确认机制**：当消息被发送到MQ后，MQ会等待消费者的确认。消费者处理完消息后，会向MQ发送一个确认消息，表示该消息已经被成功消费。如果MQ在一定时间内没有收到确认消息，它会认为该消息没有被成功消费，然后会重新发送消息给消费者。这种机制确保了消息至少被消费一次。
-> 2. **持久化存储**：MQ 通常会将消息持久化存储到磁盘或数据库中，以防止消息丢失。即使MQ服务器宕机或重启，也能从持久化存储中恢复消息，确保消息不会被遗漏。
-> 3. **重试机制**：如果消费者在处理消息时失败，MQ会尝试重新发送消息给消费者。重试的次数和间隔可以根据需要进行配置。通过重试机制，可以确保在消费者暂时不可用或处理失败的情况下，消息仍然能够被成功消费。
-> 4. **死信队列**：对于多次尝试消费都失败的消息，MQ 可以将其发送到死信队列中。这样可以避免消息一直阻塞在正常队列中，同时也为开发者提供了处理这些消息的机会。开发者可以定期检查死信队列，对其中的消息进行特殊处理。
+> 1. **确认机制**：当消息被发送到`MQ`后，`MQ`会等待消费者的确认。消费者处理完消息后，会向`MQ`发送一个确认消息，表示该消息已经被成功消费。如果`MQ`在一定时间内没有收到确认消息，它会认为该消息没有被成功消费，然后会重新发送消息给消费者。这种机制确保了消息至少被消费一次。
+> 2. **持久化存储**：`MQ` 通常会将消息持久化存储到磁盘或数据库中，以防止消息丢失。即使`MQ`服务器宕机或重启，也能从持久化存储中恢复消息，确保消息不会被遗漏。
+> 3. **重试机制**：如果消费者在处理消息时失败，`MQ`会尝试重新发送消息给消费者。重试的次数和间隔可以根据需要进行配置。通过重试机制，可以确保在消费者暂时不可用或处理失败的情况下，消息仍然能够被成功消费。
+> 4. **死信队列**：对于多次尝试消费都失败的消息，`MQ` 可以将其发送到死信队列中。这样可以避免消息一直阻塞在正常队列中，同时也为开发者提供了处理这些消息的机会。开发者可以定期检查死信队列，对其中的消息进行特殊处理。
 > 5. **消息幂等性**：对于某些业务场景，要求即使重复消费相同的消息也不会产生副作用。这时，需要保证消息的幂等性。在消费者处理消息时，可以通过一些技术手段（如唯一ID、分布式锁等）来确保消息只被处理一次。
-> 6. **监控和告警**：MQ 通常提供监控和告警功能，可以实时监控消息的消费情况。当消息消费出现异常时，MQ会及时发出告警通知，以便开发者能够及时处理问题。
+> 6. **监控和告警**：`MQ` 通常提供监控和告警功能，可以实时监控消息的消费情况。当消息消费出现异常时，`MQ`会及时发出告警通知，以便开发者能够及时处理问题。
 
 ## MQ如何保证消息消费的顺序性
 
@@ -678,39 +861,39 @@
 >
 > #### 编程式事务管理
 >
-> 编程式事务可以使用 TransactionTemplate 和 PlatformTransactionManager 来实现，需要显式执行事务。允许我们在代码中直接控制事务的边界，通过编程方式明确指定事务的开始、提交和回滚。
+> 编程式事务可以使用 `TransactionTemplate` 和 `PlatformTransactionManager` 来实现，需要显式执行事务。允许我们在代码中直接控制事务的边界，通过编程方式明确指定事务的开始、提交和回滚。
 >
 > ```java
 > public class AccountService {
->     private TransactionTemplate transactionTemplate;
+>        private TransactionTemplate transactionTemplate;
 > 
->     public void setTransactionTemplate(TransactionTemplate transactionTemplate) {
->         this.transactionTemplate = transactionTemplate;
->     }
+>        public void setTransactionTemplate(TransactionTemplate transactionTemplate) {
+>            this.transactionTemplate = transactionTemplate;
+>        }
 > 
->     public void transfer(final String out, final String in, final Double money) {
->         transactionTemplate.execute(new TransactionCallbackWithoutResult() {
->             @Override
->             protected void doInTransactionWithoutResult(TransactionStatus status) {
->                 // 转出
->                 accountDao.outMoney(out, money);
->                 // 转入
->                 accountDao.inMoney(in, money);
->             }
->         });
->     }
+>        public void transfer(final String out, final String in, final Double money) {
+>            transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+>                @Override
+>                protected void doInTransactionWithoutResult(TransactionStatus status) {
+>                    // 转出
+>                    accountDao.outMoney(out, money);
+>                    // 转入
+>                    accountDao.inMoney(in, money);
+>                }
+>            });
+>        }
 > }
 > ```
 >
-> 在上面的代码中，我们使用了 TransactionTemplate 来实现编程式事务，通过 execute 方法来执行事务，这样就可以在方法内部实现事务的控制。
+> 在上面的代码中，我们使用了 `TransactionTemplate` 来实现编程式事务，通过 `execute` 方法来执行事务，这样就可以在方法内部实现事务的控制。
 >
 > #### 声明式事务管理
 >
-> 声明式事务是建立在 AOP 之上的。其本质是通过 AOP 功能，对方法前后进行拦截，将事务处理的功能编织到拦截的方法中，也就是在目标方法开始之前启动一个事务，在目标方法执行完之后根据执行情况提交或者回滚事务。
+> 声明式事务是建立在 `AOP` 之上的。其本质是通过 `AOP` 功能，对方法前后进行拦截，将事务处理的功能编织到拦截的方法中，也就是在目标方法开始之前启动一个事务，在目标方法执行完之后根据执行情况提交或者回滚事务。
 >
-> 相比较编程式事务，优点是不需要在业务逻辑代码中掺杂事务管理的代码， Spring 推荐通过 @Transactional 注解的方式来实现声明式事务管理，也是日常开发中最常用的。
+> 相比较编程式事务，优点是不需要在业务逻辑代码中掺杂事务管理的代码， Spring 推荐通过 `@Transactional` 注解的方式来实现声明式事务管理，也是日常开发中最常用的。
 >
-> 不足的地方是，声明式事务管理最细粒度只能作用到方法级别，无法像编程式事务那样可以作用到代码块级别。
+> 不足的地方是，**声明式事务管理最细粒度只能作用到方法级别**，无法像编程式事务那样可以作用到代码块级别。
 >
 > ```java
 > @Service
@@ -728,15 +911,15 @@
 > }
 > ```
 >
-> Spring 的声明式事务管理是通过 AOP（面向切面编程）和代理机制实现的。
+> Spring 的声明式事务管理是通过 `AOP`（面向切面编程）和代理机制实现的。
 >
 > 第一步，**在 Bean 初始化阶段创建代理对象**：
 >
-> Spring 容器在初始化单例 Bean 的时候，会遍历所有的 BeanPostProcessor 实现类，并执行其 postProcessAfterInitialization 方法。
+> Spring 容器在初始化单例 Bean 的时候，会遍历所有 `BeanPostProcessor` 实现类，并执行其 `postProcessAfterInitialization` 方法。
 >
-> 在执行 postProcessAfterInitialization 方法时会遍历容器中所有的切面，查找与当前 Bean 匹配的切面，这里会获取事务的属性切面，也就是 `@Transactional` 注解及其属性值。
+> 在执行 `postProcessAfterInitialization` 方法时会遍历容器中所有的切面，查找与当前 Bean 匹配的切面，这里会获取事务的属性切面，也就是 `@Transactional` 注解及其属性值。
 >
-> 然后根据得到的切面创建一个代理对象，默认使用 JDK 动态代理创建代理，如果目标类是接口，则使用 JDK 动态代理，否则使用 Cglib。
+> 然后根据得到的切面创建一个代理对象，默认使用 `JDK` 动态代理创建代理，如果目标类是接口，则使用 `JDK` 动态代理，否则使用 `Cglib`。
 >
 > 第二步，**在执行目标方法时进行事务增强操作**：
 >
