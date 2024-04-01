@@ -267,6 +267,144 @@ public void getNext(int[] next, String target) {
 }
 ```
 
+## 415 字符串相加
+
+[415. 字符串相加](https://leetcode.cn/problems/add-strings/)
+
+**题目描述**
+
+给定两个字符串形式的非负整数 `num1` 和`num2` ，计算它们的和并同样以字符串形式返回。
+
+你不能使用任何內建的用于处理大整数的库（比如 `BigInteger`）， 也不能直接将输入的字符串转换为整数形式。
+
+**示例**
+
+> 输入：`num1 = "11", num2 = "123"`
+> 输出："134"
+
+**解题思路**
+
+模拟法：
+
+- 对两个大整数模拟**竖式相加**的过程
+- 定义变量： **add** 维护当前是否有进位
+- 核心：**对位数较短的数字进行了补零操作**
+
+**参考代码**
+
+```java
+class Solution {
+    public String addStrings(String num1, String num2) {
+        int n1 = num1.length() - 1, n2 = num2.length() - 1, add = 0;
+        StringBuilder sb = new StringBuilder();
+        while (n1 >= 0 || n2 >= 0 || add != 0) {
+            // 补零操作
+            int x1 = n1 >= 0 ? num1.charAt(n1) - '0' : 0;
+            int x2 = n2 >= 0 ? num2.charAt(n2) - '0' : 0;
+            int result = x1 + x2 + add;
+            add = result / 10;
+            sb.append(result % 10);
+            n1--;
+            n2--;
+        }
+        return sb.reverse().toString();
+    }
+}
+```
+
+## 43 字符串相乘
+
+**题目描述**
+
+给定两个以字符串形式表示的非负整数 `num1` 和 `num2`，返回 `num1` 和 `num2` 的乘积，它们的乘积也表示为字符串形式。
+
+**注意：**不能使用任何内置的 `BigInteger` 库或直接将输入转换为整数。
+
+**示例**
+
+> 输入: `num1 = "123", num2 = "456"`
+> 输出: `"56088"`
+
+**解题思路**
+
+模拟法：
+
+- 基于**竖式乘法**计算，根据被除数将其进行划分，最后在进行结果相加
+- 边界条件：
+  - 乘数和被乘数中有一个为`“0”`，则直接返回结果；
+  - 在计算过程中，如果遇到乘数和被乘数中有一项为“0”，则跳出当前循环；
+
+- 根据被乘数的位数来划分，最后相加，要注意补零操作；
+
+**参考代码**
+
+```java
+public class Multiply {
+    public String multiply(String num1, String num2) {
+        // 边界条件
+        if ("0".equals(num1) || "0".equals(num2)) return "0";
+        int n1 = num1.length() - 1, n2 = num2.length() - 1;
+        // 存放最终结果
+        StringBuilder res = new StringBuilder("0");
+        // 遍历被乘数
+        for (int i = n2; i >= 0; i--) {
+            StringBuilder sb = new StringBuilder();
+            int x = num2.charAt(i) - '0';
+            // 遇到0则退出当前循环
+            if (x == 0) continue;
+            // 补零操作
+            int temp = n2 - i;
+            while (temp > 0) {
+                sb.append('0');
+                temp--;
+            }
+            // 记录进位项的值
+            int mu = 0;
+            // 记录乘数
+            for (int j = n1; j >= 0; j--) {
+                int y = num1.charAt(j) - '0';
+                int result = x * y + mu;
+                sb.append(result % 10);
+                mu = result / 10;
+            }
+            // 此时若进位项还有值，则将其添加到sb中
+            if (mu > 0) {
+                sb.append(mu);
+            }
+            // 两数相加
+            res = addStrings(res, sb.reverse());
+        }
+        return res.toString();
+    }
+
+    public StringBuilder addStrings(StringBuilder num1, StringBuilder num2) {
+        int n1 = num1.length() - 1, n2 = num2.length() - 1, add = 0;
+        StringBuilder sb = new StringBuilder();
+        while (n1 >= 0 || n2 >= 0 || add != 0) {
+            int x1 = n1 >= 0 ? num1.charAt(n1) - '0' : 0;
+            int x2 = n2 >= 0 ? num2.charAt(n2) - '0' : 0;
+            int result = x1 + x2 + add;
+            add = result / 10;
+            sb.append(result % 10);
+            n1--;
+            n2--;
+        }
+        return sb.reverse();
+    }
+
+    public static void main(String[] args) {
+        String num1 = "9133";
+        String num2 = "0";
+        Multiply multiply = new Multiply();
+        String res = multiply.multiply(num1, num2);
+        System.out.println(res);
+    }
+}
+
+```
+
+
+
 ------
 
 # 双指针
@@ -666,7 +804,7 @@ public int minSubArrayLen(int target, int[] nums) {
 
 # 栈与队列
 
-## 239. 滑动窗口的最大值
+## 239 滑动窗口的最大值
 
 [239. 滑动窗口最大值 - 力扣（LeetCode）](https://leetcode.cn/problems/sliding-window-maximum/description/)
 
@@ -674,7 +812,7 @@ public int minSubArrayLen(int target, int[] nums) {
 
 **示例**
 
-```
+```java
 输入：nums = [1,3,-1,-3,5,3,6,7], k = 3
 输出：[3,3,5,5,6,7]
 解释：
@@ -762,6 +900,78 @@ public int[] maxSlidingWindow(int[] nums, int k) {
 }
 ```
 
+## 150 逆波兰表达式求值
+
+[150. 逆波兰表达式求值](https://leetcode.cn/problems/evaluate-reverse-polish-notation/)
+
+**题目描述**
+
+给你一个字符串数组 `tokens` ，表示一个根据 [逆波兰表示法](https://baike.baidu.com/item/逆波兰式/128437) 表示的算术表达式。
+
+请你计算该表达式。返回一个表示表达式值的整数
+
+**示例**
+
+> 输入：`tokens = ["4","13","5","/","+"]`
+> 输出：6
+> 解释：该算式转化为常见的中缀算术表达式为：`(4 + (13 / 5)) = 6`
+
+> 输入：`tokens = ["2","1","+","3","*"]`
+> 输出：9
+> 解释：该算式转化为常见的中缀算术表达式为：`((2 + 1) * 3) = 9`
+
+> **注意：**
+>
+> - 有效的算符为 `'+'`、`'-'`、`'*'` 和 `'/'` 。
+> - 每个操作数（运算对象）都可以是一个整数或者另一个表达式。
+> - 两个整数之间的除法总是 **向零截断** 。
+> - 表达式中不含除零运算。
+> - 输入是一个根据逆波兰表示法表示的算术表达式。
+> - 答案及所有中间计算结果可以用 **32 位** 整数表示。
+
+**解题思路**
+
+**参考代码**
+
+```java
+class Solution {
+    public int evalRPN(String[] tokens) {
+        Stack<Integer> stack = new Stack<>();
+        for (String s : tokens) {
+            if (isNumber(s)) {
+                stack.push(Integer.parseInt(s));
+            } else {
+                Integer num2 = stack.pop();
+                Integer num1 = stack.pop();
+                switch (s) {
+                    case "/":
+                        stack.push(num1 / num2);
+                        break;
+                    case "*":
+                        stack.push(num1 * num2);
+                        break;
+                    case "+":
+                        stack.push(num1 + num2);
+                        break;
+                    case "-":
+                        stack.push(num1 - num2);
+                        break;
+                    default:
+                        return -1;
+                }
+            }
+        }
+        return stack.pop();
+    }
+
+    public boolean isNumber(String token) {
+        return !("+".equals(token) || "-".equals(token) || "*".equals(token) || "/".equals(token));
+    }
+}
+```
+
+
+
 ------
 
 # 二叉树
@@ -823,6 +1033,8 @@ public List<List<Integer>> levelOrder(TreeNode root) {
     }
     return res;
 }
+
+
 public List<List<Integer>> resList = new ArrayList<List<Integer>>();
 
 public List<List<Integer>> levelOrder2(TreeNode root) {
@@ -851,7 +1063,9 @@ public void traversal(TreeNode node, Integer deep) {
 }
 ```
 
-## 701.二叉搜索树中的插入操作
+------
+
+## 701 二叉搜索树中的插入操作
 
 [701. 二叉搜索树中的插入操作](https://leetcode.cn/problems/insert-into-a-binary-search-tree/)
 
@@ -910,7 +1124,7 @@ public TreeNode insertIntoBST2(TreeNode root, int val) {
 }
 ```
 
-## 669. 修剪二叉搜索树
+## 669 修剪二叉搜索树
 
 [669. 修剪二叉搜索树 - 力扣（LeetCode）](https://leetcode.cn/problems/trim-a-binary-search-tree/description/)
 
@@ -933,7 +1147,7 @@ public TreeNode insertIntoBST2(TreeNode root, int val) {
 
 **参考代码**
 
-## 538. 把二叉搜索树转换为累加树
+## 538 把二叉搜索树转换为累加树
 
 [538. 把二叉搜索树转换为累加树](https://leetcode.cn/problems/convert-bst-to-greater-tree/)
 
@@ -1151,7 +1365,7 @@ public void swap(int[] nums, int i, int j) {
 
 # 动态规划
 
-动态规划，英文：Dynamic Programming，简称DP，如果某一问题有很多重叠子问题，使用动态规划是最有效的。
+动态规划，英文：Dynamic Programming，简称DP，如果某一问题有很多**重叠子问题**，使用动态规划是最有效的。
 
 所以动态规划中每一个状态一定是由上一个状态推导出来的，**这一点就区分于贪心**，贪心没有状态推导，而是从局部直接选最优的;
 

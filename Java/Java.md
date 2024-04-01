@@ -613,6 +613,43 @@ IO 多路复用模型中，线程首先发起 **select 调用**，询问内核�
 
 ## 多线程
 
+[Java多线程最佳实践](https://juejin.cn/post/7284221961621848119#heading-8)
+
+[Java并发常见面试题](https://javaguide.cn/java/concurrent/java-concurrent-questions-02.html#%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E5%8F%98%E9%87%8F%E7%9A%84%E5%8F%AF%E8%A7%81%E6%80%A7)
+
+### 线程池
+
+#### **线程池创建核心参数**
+
+<img src="Java.assets/640.webp" alt="图片" style="zoom: 67%;" />
+
+> 解释：
+>
+> **`corePoolSize`**：定义了线程池中的核心线程数量。即使这些线程处于空闲状态，它们也不会被回收。这是线程池保持在等待状态下的线程数。
+>
+> `maximumPoolSize`：线程池允许的最大线程数量。当工作队列满了之后，线程池会创建新线程来处理任务，直到线程数达到这个最大值。
+>
+> **`keepAliveTime`**：非核心线程的空闲存活时间。如果线程池中的线程数量超过了 corePoolSize，那么这些多余的线程在空闲时间超过 keepAliveTime 时会被终止。
+>
+> **`unit`**：keepAliveTime 参数的时间单位：
+>
+> **`workQueue`**：用于存放待处理任务的阻塞队列。当所有核心线程都忙时，新任务会被放在这个队列里等待执行。
+>
+> **`threadFactory`**：一个创建新线程的工厂。它用于创建线程池中的线程。可以通过自定义 `ThreadFactory` 来给线程池中的线程设置有意义的名字，或设置优先级等。
+>
+> `handler`：拒绝策略 `RejectedExecutionHandler`，定义了当线程池和工作队列都满了之后对新提交的任务的处理策略。常见的拒绝策略包括抛出异常、直接丢弃、丢弃队列中最老的任务、由提交任务的线程来直接执行任务等。
+
+#### 线程池的工作流程
+
+> 当应用程序提交一个任务时，线程池会根据**当前线程的状态和参数**决定如何处理这个任务。
+>
+> - 如果线程池中的核心线程都在忙，并且线程池未达到最大线程数，新提交的任务会被放入队列中进行等待。
+> - 如果任务队列已满，且当前线程数量小于最大线程数，线程池会创建新的线程来处理任务。
+>
+> 空闲的线程会从任务队列中取出任务来执行，当任务执行完毕后，线程并不会立即销毁，而是继续保持在池中等待下一个任务。
+>
+> 当线程空闲时间超出指定时间，且当前线程数量大于核心线程数时，线程会被回收。
+
 
 
 ------
@@ -900,6 +937,24 @@ final修饰的基本数据类型的静态变量，准备阶段直接会将代码
 
 ### 核心问题
 
+> **类加载过程**
+>
+> 类加载过程有：加载、验证、准备、解析、初始化。
+>
+> 1、加载阶段
+>
+> - 1）通过一个类的全限定名来获取定义此类的二进制字节流。
+> - 2）将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构。
+> - 3）在内存中生成一个代表这个类的 `java.lang.Class` 对象，作为方法区这个类的各种数据的访问入口。
+>
+> 2、验证阶段：对二进制字节流进行校验，只有符合 JVM 字节码规范的才能被 JVM 正确执行。
+>
+> 3、准备阶段：对类变量（也称为静态变量，static 关键字修饰的变量）分配内存并初始化，初始化为数据类型的默认值，如 0、0L、null、false 等。
+>
+> 4、解析阶段：是虚拟机将常量池内的符号引用替换为直接引用的过程。解析动作主要针对类或接口、字段、类方法、接口方法、成员方法等。
+>
+> 5、初始化阶段：类加载过程的最后一步。在准备阶段，类变量已经被赋过默认初始值了，而在初始化阶段，类变量将被赋值为代码期望赋的值。
+
 **1、类加载器的作用是什么？**
 
 答：类加载器（ClassLoader）负责在类加载过程中的字节码获取并加载到内存这一部分。通过加载字节码数据放入内存转化成byte[]，接下来调用虚拟机底层方法将byte[]转化成方法区和堆区中的数据。
@@ -918,15 +973,20 @@ JDK9及之后扩展类加载器（`Extension ClassLoader`）变成了平台类�
 
 ![image-20240304195644715](Java.assets/image-20240304195644715.png)
 
-**3、类的双亲委派机制是什么？**
-
-答：每个Java实现的类加载器中保存了一个成员变量叫**“父”（Parent）类加载器**。 **自底向上查找是否加载过，再由顶向下进行加载。避免了核心类被应用程序重写并覆盖的问题，提升了安全性**。
-
-1、当一个类加载器去加载某个类的时候，会自底向上查找是否加载过，如果加载过就直接返回，如果一直到最顶层的类加载器都没有加载，再自顶向下进行加载
-
-2、应用程序类加载器的父类是扩展类加载器，扩展类加载器的父类是启动类加载器；
-
-3、双亲委派机制的好处有两点：第一是避免恶意代码替换JDK中的核心类库，比如`java.lang.String`，确保核心类库的安全性和完整性，第二是避免一个类重复地被加载；
+> **3、类的双亲委派机制是什么？**
+>
+> 答：双亲委派模型（Parent Delegation Model）是 Java 类加载机制中的一个重要概念。这种模型指的是一个类加载器在尝试加载某个类时，首先会将加载任务委托给其父类加载器去完成。只有当父类加载器无法完成这个加载请求（即它找不到指定的类）时，子类加载器才会尝试自己去加载这个类。
+>
+> - 每个Java实现的类加载器中保存了一个成员变量叫**“父”（Parent）类加载器**。 **自底向上查找是否加载过，再由顶向下进行加载。避免了核心类被应用程序重写并覆盖的问题，提升了安全性**。
+>
+> - 当一个类加载器去加载某个类的时候，会自底向上查找是否加载过，如果加载过就直接返回，如果一直到最顶层的类加载器都没有加载，再自顶向下进行加载
+>
+> - 应用程序类加载器的父类是扩展类加载器，扩展类加载器的父类是启动类加载器；
+>
+> **双亲委派机制的好处有两点：**
+>
+> - **避免恶意代码替换`JDK`中的核心类库**，比如`java.lang.String`，确保核心类库的安全性和完整性；
+> - **避免一个类重复地被加载**；
 
 **4、这怎么打破类的双亲委派机制？**
 
@@ -1514,9 +1574,9 @@ public static void main(String[] args) {
 
 **应用场景**
 
-- 解决系统僵死的问题：大厂的系统出现的许多系统僵死问题 都与频繁的垃圾回收有关
+- 解决系统僵死的问题：大厂的系统出现的许多系统僵死问题，都与频繁的垃圾回收有关
 
-- 性能优化：对垃圾回收器进行合理的设置可以有 效地提升程序的执行性能
+- 性能优化：对垃圾回收器进行合理的设置可以有效地提升程序的执行性能
 
 - 高频面试题：常见的垃圾回收器、常见的垃圾回收算法、四种引用、项目中用了哪一种垃圾回收器
 
@@ -1534,14 +1594,14 @@ public static void main(String[] args) {
 
 2、**加载该类的类加载器已经被回收**。 
 
-3、**该类对应的 java.lang.Class 对象没有在任何地方被引用**
+3、**该类对应的 `java.lang.Class` 对象没有在任何地方被引用**
 
 方法区的回收 – 手动触发回收
 
-如果需要手动触发垃圾回收，可以调用System.gc()方法。
+如果需要手动触发垃圾回收，可以调用`System.gc()`方法。
 
 - 语法： `System.gc()` 
-- 注意事项： 调用System.gc()方法并不一定会立即回收垃圾，仅仅是向Java虚拟机发送一个垃圾回收的请求，具体是否需要执行垃圾回收Java虚拟机会自行判断。
+- 注意事项： 调用`System.gc()`方法并不一定会立即回收垃圾，仅仅是向Java虚拟机发送一个垃圾回收的请求，具体是否需要执行垃圾回收Java虚拟机会自行判断。
 
 ------
 
@@ -1562,24 +1622,24 @@ Java中的对象是否能被回收，是根据对象是否被引用来决定的�
 - 缺点主要有两点：
   - 1.每次引用和取消引用都需要维护计数器，对系统性能会有一定的影响
   - 2.存在循环引用问题，所谓循环引用就是当A引用B，B同时引用A时会出现对象无法回收的问题。
-- 如果想要查看垃圾回收的信息，可以使用-verbose:gc参数。
-  - 语法： -verbose:gc
+- 如果想要查看垃圾回收的信息，可以使用`-verbose:gc`参数。
+  - 语法： `-verbose:gc`
 
 **可达性分析算法**
 
 Java使用的是**可达性分析算法**来判断对象是否可以被回收。
 
-可达性分析将对象分为两类：**垃圾回收的根对象（GC  Root）和普通对象**，对象与对象之间存在引用关系。
+可达性分析将对象分为两类：**垃圾回收的根对象（`GC  Root`）和普通对象**，对象与对象之间存在引用关系。
 
-可达性分析算法指的是如果从某个到GC Root对象是可达的，对象就不可被回收。
+可达性分析算法指的是如果从某个对象到`GC Root`对象是可达的，对象就不可被回收。
 
-- GC Root对象常规情况下是不会被回收的
+- `GC Root`对象常规情况下是不会被回收的
 
-> 哪些对象被称之为GC Root对象呢？ 
+> 哪些对象被称之为`GC Root`对象呢？ 
 
 - **线程Thread对象**，引用线程栈帧中的方法参数、局部变量等。
 
-- **系统类加载器加载的java.lang.Class对象**，引用类中的静态变量。
+- **系统类加载器加载的`java.lang.Class`对象**，引用类中的静态变量。
 
 - **监视器对象**，用来保存同步锁synchronized关键字持有的对象。 
 
@@ -1589,14 +1649,14 @@ Java使用的是**可达性分析算法**来判断对象是否可以被回收。
 
 #### 五种对象引用
 
-可达性算法中描述的对象引用，一般指的是强引用，即是GCRoot对象对普通对象有引用关系，只要这层关系存在， 普通对象就不会被回收。除了强引用之外，Java中还设计了几种其他引用方式：
+可达性算法中描述的对象引用，一般指的是强引用，即是GCRoot对象对普通对象有引用关系，只要这层关系存在， 普通对象就不会被回收。除了**强引用**之外，Java中还设计了几种其他引用方式：
 
-- 软引用
-- 弱引用
-- 虚引用
-- 终结器引用
+- **软引用**
+- **弱引用**
+- **虚引用**
+- **终结器引用**
 
-1、软引用
+**1、软引用**
 
 - 软引用相对于强引用是一种比较弱的引用关系，如果一个对象只有软引用关联到它，当程序内存不足时，就会将软引用中的数据进行回收。
 - 软引用的执行过程如下： 
@@ -1607,11 +1667,11 @@ Java使用的是**可达性分析算法**来判断对象是否可以被回收。
 
 ![image-20240305171450173](Java.assets/image-20240305171450173.png)
 
-2、弱引用
+2、**弱引用**
 
 弱引用的整体机制和软引用基本一致，区别在于弱引用包含的对象在垃圾回收时，**不管内存够不够都会直接被回收**。
 
-在JDK 1.2版之后提供了WeakReference类来实现弱引用，弱引用主要在`ThreadLocal`中使用。
+在`JDK 1.2`版之后提供了`WeakReference`类来实现弱引用，弱引用主要在`ThreadLocal`中使用。
 
 弱引用对象本身也可以使用引用队列进行回收。
 
@@ -1630,12 +1690,12 @@ System.out.println(weakReference.get());
 // null3、虚引用
 ```
 
-3、虚引用和终结器引用
+**3、虚引用和终结器引用**
 
 - **这两种引用在常规开发中是不会使用的**。
 
-- 虚引用也叫幽灵引用/幻影引用，不能通过虚引用对象获取到包含的对象。虚引用唯一的用途是当对象被垃圾回 收器回收时可以接收到对应的通知。Java中使用`PhantomReference`实现了虚引用，直接内存中为了及时知道 直接内存对象不再使用，从而回收内存，使用了虚引用来实现。
-- 终结器引用指的是在对象需要被回收时，终结器引用会关联对象并放置在Finalizer类中的引用队列中，在稍后 由一条由`FinalizerThread`线程从队列中获取对象，然后执行对象的finalize方法，在对象第二次被回收时，该对象才真正的被回收。在这个过程中可以在finalize方法中再将自身对象使用强引用关联上，但是不建议这样做
+- 虚引用也叫幽灵引用/幻影引用，不能通过虚引用对象获取到包含的对象。虚引用唯一的用途是当对象被垃圾回收器回收时可以接收到对应的通知。Java中使用`PhantomReference`实现了虚引用，直接内存中为了及时知道直接内存对象不再使用，从而回收内存，使用了虚引用来实现。
+- 终结器引用指的是在对象需要被回收时，终结器引用会关联对象并放置在`Finalizer`类中的引用队列中，在稍后由一条由`FinalizerThread`线程从队列中获取对象，然后执行对象的finalize方法，在对象第二次被回收时，该对象才真正的被回收。在这个过程中可以在finalize方法中再将自身对象使用强引用关联上，但是不建议这样做
 
 ------
 
@@ -1643,22 +1703,22 @@ System.out.println(weakReference.get());
 
 核心思想：Java是如何实现垃圾回收的呢？简单来说，垃圾回收要做的有两件事： 
 
-1、找到内存中存活的对象
+1. 找到内存中存活的对象
 
-2、释放不再存活对象的内存，使得程序能再次利用这部分空间
+2. 释放不再存活对象的内存，使得程序能再次利用这部分空间
 
 四种垃圾回收算法
 
-- 标记-清除算法
-- 复制算法
+- **标记-清除算法**
+- **复制算法**
 
-- 标记-整理算法
+- **标记-整理算法**
 
-- 分代GC
+- **分代GC**
 
 > 垃圾回收算法的评价标准
 
-Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用哪一种GC算法，都会有部分阶段需要停止所有的用户线程。这个过程被称之为Stop The World简称STW，如果STW时间过长则会影响用户的使用。所以判断GC算法是否优秀，可以从三个方面来考虑：
+Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用哪一种`GC算法`，都会有部分阶段需要停止所有的用户线程。这个过程被称之为`Stop The World`简称`STW`，如果`STW`时间过长则会影响用户的使用。所以判断`GC`算法是否优秀，可以从三个方面来考虑：
 
 **1、吞吐量**
 
@@ -1666,10 +1726,10 @@ Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用�
 
 **2、最大暂停时间**
 
-- 最大暂停时间指的是所有在垃圾回收过程中的STW时间最大值。
+- 最大暂停时间指的是所有在垃圾回收过程中的`STW`时间最大值。
 - 比如如下的图中，黄色部分的STW就是最大暂停时间，显而易见上面的图比下面的图拥有更少的最大暂停时间。最大暂停时间越短，用户使用系统时受到的影响就越短。
 
-![image-20240306112551599](Java.assets/image-20240306112551599.png)
+<img src="Java.assets/image-20240306112551599.png" alt="image-20240306112551599" style="zoom:50%;" />
 
 **3、堆使用效率**
 
@@ -1681,7 +1741,7 @@ Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用�
 
 标记清除算法的核心思想分为两个阶段： 
 
-- 1、标记阶段，将所有存活的对象进行标记。Java中使用**可达性分析算法**，从GC Root开始通过引用链遍历出所有存活对象。
+- 1、标记阶段，将所有存活的对象进行标记。Java中使用**可达性分析算法**，从`GC Root`开始通过引用链遍历出所有存活对象。
 
 - 2、清除阶段，从内存中删除没有被标记也就是非存活对象。
 
@@ -1698,13 +1758,13 @@ Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用�
 
 - 1、准备两块空间From空间和To空间，每次在对象分配阶段，只能使用其中一块空间（From空间）
 
-- 2、在垃圾回收GC阶段，将From中存活对象复制到To空间。
+- 2、在垃圾回收`GC`阶段，将From中存活对象复制到To空间。
 
 - 3、将两块空间的From和To名字互换。
 
 优点：
 
-- 吞吐量高：复制算法只需要遍历一次存活对象 复制到To空间即可，比标记-整理 算法少了一次遍历的过程，因而性 能较好，但是不如标记-清除算法， 因为标记清除算法不需要进行对象的移动
+- 吞吐量高：复制算法只需要遍历一次存活对象复制到To空间即可，比标记-整理算法少了一次遍历的过程，因而性能较好，但是不如标记-清除算法， 因为标记清除算法不需要进行对象的移动
 
 - **不会发生碎片化**：复制算法在复制之后就会将对象按顺序放入To空间中，所以对象以外的区域都是可用空间，不存在碎片化内存空间。
 
@@ -1716,7 +1776,7 @@ Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用�
 
 核心思想分为两个阶段：
 
-1. 标记阶段，将所有存活的对象进行标记。Java中使用可达性分析算法，从GC Root开始通过引用链遍历出所有存活对象。
+1. 标记阶段，将所有存活的对象进行标记。Java中使用可达性分析算法，从`GC Root`开始通过引用链遍历出所有存活对象。
 2. 整理阶段，将存活对象移动到堆的一端。清理掉存活对象的内存空间。
 
 优点
@@ -1726,7 +1786,7 @@ Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用�
 
 缺点
 
-- 整理阶段的效率不高：整理算法有很多种，比如Lisp2整 理算法需要对整个堆中的对象搜索3 次，整体性能不佳。可以通过TwoFinger、表格算法、ImmixGC等高效的整理算法优化此阶段的性能
+- 整理阶段的效率不高：整理算法有很多种，比如`Lisp2`整理算法需要对整个堆中的对象搜索3次，整体性能不佳。可以通过`TwoFinger`、表格算法、`ImmixGC`等高效的整理算法优化此阶段的性能
 
 > **分代GC**
 
@@ -1736,11 +1796,11 @@ Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用�
 - 年轻代：用于存放存活时间比较短的对象
 - 老年代：用于存放存活时间比较长的对象
 
-![image-20240306151646207](Java.assets/image-20240306151646207.png)
+<img src="Java.assets/image-20240306151646207.png" alt="image-20240306151646207" style="zoom:50%;" />
 
 **arthas查看分代之后的内存情况** 
 
-- 在JDK8中，添加`-XX:+UseSerialGC`参数使用分代回收的垃圾回收器，运行程序。
+- 在`JDK8`中，添加`-XX:+UseSerialGC`参数使用分代回收的垃圾回收器，运行程序。
 
 - 在arthas中使用`memory`命令查看内存，显示出三个区域的内存情况。
 
@@ -1748,20 +1808,20 @@ Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用�
 
 **调整内存区域的大小**
 
-![image-20240306150219531](Java.assets/image-20240306150219531.png)
+<img src="Java.assets/image-20240306150219531.png" alt="image-20240306150219531" style="zoom: 80%;" />
 
 分代垃圾回收算法执行流程
 
 - 1、分代回收时，创建出来的对象，首先会被放入`Eden`伊甸园区。 
-- 2、随着对象在Eden区越来越多，如果Eden区满，新创建的对象已经无法放入，就会触发年轻代的GC，称为 `Minor GC或者Young GC`。Minor GC会把需要eden中和From需要回收的对象回收，把没有回收的对象放入To区。 
+- 2、随着对象在Eden区越来越多，如果Eden区满，新创建的对象已经无法放入，就会触发年轻代的`GC`，称为 `Minor GC或者Young GC`。`Minor GC`会把需要eden中和From需要回收的对象回收，把没有回收的对象放入To区。 
 
-- 3、接下来，S0会变成To区，S1变成From区。当eden区满时再往里放入对象，依然会发生Minor GC。 此时会回收eden区和S1(from)中的对象，并把eden和from区中剩余的对象放入S0。注意：每次Minor GC中都会为对象记录他的年龄，初始值为0，每次GC完加1。
-- 4、如果Minor GC后对象的年龄达到阈值（最大15，默认值和垃圾回收器有关），对象就会被晋升至老年代。
-- 5、当老年代中空间不足，无法放入新的对象时，先尝试minor gc如果还是不足，就会触发`Full GC`，`Full GC`会对整个堆进行垃圾回收。 如果Full GC依然无法回收掉老年代的对象，那么当对象继续放入老年代时，就会抛出`Out Of Memory`异常。
+- 3、接下来，`S0`会变成To区，`S1`变成From区。当eden区满时再往里放入对象，依然会发生`Minor GC`。 此时会回收eden区和`S1(from)`中的对象，并把eden和from区中剩余的对象放入`S0`。注意：每次`Minor GC`中都会为对象记录他的年龄，初始值为0，每次GC完加1。
+- 4、如果`Minor GC`后对象的年龄达到阈值（最大15，默认值和垃圾回收器有关），对象就会被晋升至老年代。
+- 5、当老年代中空间不足，无法放入新的对象时，先尝试`minor gc`如果还是不足，就会触发`Full GC`，`Full GC`会对整个堆进行垃圾回收。 如果`Full GC`依然无法回收掉老年代的对象，那么当对象继续放入老年代时，就会抛出`Out Of Memory`异常。
 
 #### 垃圾回收器
 
-> 为什么分代GC算法要把堆分成年轻代和老年代？
+> 为什么分代`GC`算法要把堆分成年轻代和老年代？
 
 系统中的大部分对象，都是创建出来之后很快就不再使用可以被回收，比如用户获取订单数据，订单数据返回给用户之后就可以释放了。
 
@@ -1769,45 +1829,45 @@ Java垃圾回收过程会通过单独的GC线程来完成，但是不管使用�
 
 在虚拟机的默认设置中，新生代大小要远小于老年代的大小。
 
-分代GC算法将堆分成年轻代和老年代主要原因有：
+**分代`GC`算法将堆分成年轻代和老年代主要原因有：**
 
 - 1、可以通过调整年轻代和老年代的比例来适应不同类型的应用程序，提高内存的利用率和性能。 
-- 2、新生代和老年代使用不同的垃圾回收算法，新生代一般选择复制算法，老年代可以选择标记-清除和标记-整理 算法，由程序员来选择灵活度较高。 
-- 3、分代的设计中允许只回收新生代（minor gc），如果能满足对象分配的要求就不需要对整个堆进行回收(full gc),STW时间就会减少。
+- 2、新生代和老年代使用不同的垃圾回收算法，**新生代一般选择复制算法**，**老年代可以选择标记-清除和标记-整理算法**，由程序员来选择灵活度较高。 
+- 3、分代的设计中允许只回收新生代（`minor gc`），如果能满足对象分配的要求就不需要对整个堆进行回收`(full gc`)，`STW`时间就会减少。
 
 **垃圾回收器的组合关系**
 
-垃圾回收器是垃圾回收算法的具体实现。 由于垃圾回收器分为年轻代和老年代，**除了G1之外其他垃圾回收器必须成对组合进行使用**。
+垃圾回收器是垃圾回收算法的具体实现。 由于垃圾回收器分为年轻代和老年代，**除了`G1`之外其他垃圾回收器必须成对组合进行使用**。
 
 ![image-20240306152423530](Java.assets/image-20240306152423530.png)
 
-**1、Serial和SerialOld组合关系**
+**1、`Serial`和`SerialOld`组合关系**
 
-|          | **年轻代-Serial垃圾回收器**                                  | 老年代-SerialOld垃圾回收器                                   |
+|          | **年轻代-`Serial`垃圾回收器**                                | 老年代-`SerialOld`垃圾回收器                                 |
 | -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 介绍     | Serial是一种**单线程串行**回收年轻代的垃圾回收器             | SerialOld是Serial垃圾回收器的老年代版 本，采用**单线程串行**回收 <br/>**-XX:+UseSerialGC 新生代、老年代都使用串行回收器**。 |
+| 介绍     | Serial是一种**单线程串行**回收年轻代的垃圾回收器             | `SerialOld`是`Serial`垃圾回收器的老年代版本，采用**单线程串行**回收 <br/>**`-XX:+UseSerialGC` 新生代、老年代都使用串行回收器**。 |
 | 回收年代 | 年轻代                                                       | 老年代                                                       |
 | 回收算法 | 复制算法                                                     | 标记-整理算法                                                |
 | 优点     | 单CPU处理器下吞吐量非常出色                                  | 单CPU处理器下吞吐量非常出色                                  |
 | 缺点     | 多CPU下吞吐量不如其他垃圾回收器，堆如果偏大会让用户线程处于长期的等待 | 多CPU下吞吐量不如其他垃圾回收器，堆如果偏大会让用户线程处于长期的等待 |
-| 适用场景 | Java编写的客户端程序或者硬件配置有限的场景                   | 与Seriel垃圾回收器搭配使用或者在CMS特殊情况下适用            |
+| 适用场景 | Java编写的客户端程序或者硬件配置有限的场景                   | 与`Seriel`垃圾回收器搭配使用或者在`CMS`特殊情况下适用        |
 
-**2、ParNew和CMS组合关系**
+**2、`ParNew`和`CMS`组合关系**
 
-|          | **年轻代-ParNew垃圾回收器**                                  | 老年代- CMS(Concurrent Mark Sweep)垃圾回收器                 |
+|          | **年轻代-`ParNew`垃圾回收器**                                | 老年代- `CMS`(Concurrent Mark Sweep)垃圾回收器               |
 | -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 介绍     | ParNew垃圾回收器本质上是对Serial在多 CPU下的优化，使用**多线程**进行垃圾回收 `-XX:+UseParNewGC` 新生代使用ParNew<br/>回收器， 老年代使用串行回收器 | CMS垃圾回收器关注的是**系统的暂停时间**， 允许用户线程和垃圾回收线程在某些步骤中<br/>同时执行，减少了用户线程的等待时间。<br/>参数：`XX:+UseConcMarkSweepGC` |
+| 介绍     | `ParNew`垃圾回收器本质上是对Serial在多 CPU下的优化，使用**多线程**进行垃圾回收 `-XX:+UseParNewGC` 新生代使用`ParNew`回收器， 老年代使用串行回收器 | `CMS`垃圾回收器关注的是**系统的暂停时间**， 允许用户线程和垃圾回收线程在某些步骤中同时执行，减少了用户线程的等待时间。<br/>参数：`XX:+UseConcMarkSweepGC` |
 | 回收年代 | 年轻代                                                       | 老年代                                                       |
 | 回收算法 | **复制算法**                                                 | **标记-清除算法**                                            |
-| 优点     | 多CPU处理器下停顿时间较短                                    | 系统由于垃圾回收出现的停 顿时间较短，用户体验好              |
-| 缺点     | 吞吐量和停顿时间不如G1， 所以在JDK9之后不建议使用            | 内存碎片问题；退化问题；浮动垃圾问题                         |
-| 适用场景 | JDK8及之前的版本中，与CMS 老年代垃圾回收器搭配使用           | 大型的互联网系统中用户请求数 据量大、频率高的场景，比如订单接口、商品接口等 |
+| 优点     | 多CPU处理器下停顿时间较短                                    | 系统由于垃圾回收出现的停顿时间较短，用户体验好               |
+| 缺点     | 吞吐量和停顿时间不如`G1`， 所以在`JDK9`之后不建议使用        | 内存碎片问题；退化问题；浮动垃圾问题                         |
+| 适用场景 | `JDK8`及之前的版本中，与`CMS`老年代垃圾回收器搭配使用        | 大型的互联网系统中用户请求数据量大、频率高的场景，比如订单接口、商品接口等 |
 
-CMS执行步骤： 
+`CMS`执行步骤： 
 
 - 1.初始标记，用极短的时间标记出GC Roots能直接关联到的对象。 
 
-- 2.并发标记, 标记所有的对象，用户线程不需要暂停。
+- 2.并发标记，标记所有的对象，用户线程不需要暂停。
 
 - 3.重新标记，由于并发标记阶段有些对象会发生了变化，存在错标、漏标等情况，需要重新标记。
 
@@ -1815,28 +1875,28 @@ CMS执行步骤：
 
 ![image-20240306154500654](Java.assets/image-20240306154500654.png)
 
-CMS 缺点
+`CMS` 缺点
 
-- CMS使用了标记-清除算法，在垃圾收集结束之后会出现大量的内存碎片，CMS会在Full GC时进行碎片的整理。 这样会导致用户线程暂停，可以使用`-XX:CMSFullGCsBeforeCompaction=N 参数（默认0）`调整N次Full GC之 后再整理。 
+- `CMS`使用了标记-清除算法，在垃圾收集结束之后会出现大量的内存碎片，`CMS`会在`Full GC`时进行碎片的整理。 这样会导致用户线程暂停，可以使用`-XX:CMSFullGCsBeforeCompaction=N 参数（默认0）`调整N次`Full GC`之后再整理。 
 - 无法处理在并发清理过程中产生的“浮动垃圾”，不能做到完全的垃圾回收。
-- 如果老年代内存不足无法分配对象，CMS就会退化成Serial Old单线程回收老年代。
+- 如果老年代内存不足无法分配对象，`CMS`就会退化成Serial Old单线程回收老年代。
 
 **3、Parallel Scavenge和Parallel Old组合关系**
 
 |          | 年轻代-Parallel Scavenge垃圾回收器                           | 老年代-Parallel Old垃圾回收器                                |
 | -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 介绍     | Parallel Scavenge是**JDK8默认的年轻代垃圾回收器**， 多线程并行回收，关注的是系统的吞吐量。具备**自动调整堆内存大小**的特点。 | Parallel Old是为Parallel Scavenge收集器 设计的老年代版本，利用多线程并发收集。<br />参数： `-XX:+UseParallelGC 或 -XX:+UseParallelOldGC`可以使用`Parallel Scavenge + Parallel Old`这种组合 |
+| 介绍     | Parallel Scavenge是**`JDK8`默认的年轻代垃圾回收器**， **多线程并行回收**，关注的是**系统的吞吐量**。具备**自动调整堆内存大小**的特点。 | Parallel Old是为Parallel Scavenge收集器 设计的老年代版本，利用多线程并发收集。<br />参数： `-XX:+UseParallelGC 或 -XX:+UseParallelOldGC`可以使用`Parallel Scavenge + Parallel Old`这种组合 |
 | 回收年代 | 年轻代                                                       | 老年代                                                       |
 | 回收算法 | **复制算法**                                                 | **标记-整理算法**                                            |
-| 优点     | 吞吐量高，而且手动可控。 为了提高吞吐量，虚拟机会动态调整堆的参数 | 并发收集，在多核CPU下 效率较高                               |
+| 优点     | 吞吐量高，而且手动可控。为了提高吞吐量，虚拟机会动态调整堆的参数 | 并发收集，在多核CPU下效率较高                                |
 | 缺点     | 不能保证单次的停顿时间                                       | 暂停时间会比较长                                             |
-| 适用场景 | 后台任务，不需要与用户交互，并 且容易产生大量的对象，比如：大数据的处理，大文件导出 | 与Parallel Scavenge配套使用                                  |
+| 适用场景 | 后台任务，不需要与用户交互，并 且容易产生大量的对象，比如：大数据的处理，大文件导出 | 与`Parallel Scavenge`配套使用                                |
 
-Parallel Scavenge垃圾回收器
+**Parallel Scavenge垃圾回收器**
 
-- Parallel Scavenge允许手动设置最大暂停时间和吞 吐量。
+- Parallel Scavenge允许手动设置最大暂停时间和吞吐量。
 
-- Oracle官方建议在使用这个组合时，不要设置堆内存 的最大值，垃圾回收器会根据最大暂停时间和吞吐量自动调整内存大小。
+- Oracle官方建议在使用这个组合时，不要设置堆内存的最大值，垃圾回收器会根据最大暂停时间和吞吐量自动调整内存大小。
 
 最大暂停时间：`-XX:MaxGCPauseMillis=n` 设置每次垃圾回收时的最大停顿毫秒数
 
@@ -1844,61 +1904,67 @@ Parallel Scavenge垃圾回收器
 
 自动调整内存大小：`-XX:+UseAdaptiveSizePolicy`设置可以让垃圾回收器根据吞吐量和最大停顿的毫秒数自动调整内存大小
 
-**4、G1垃圾回收器**
+**4、`G1`垃圾回收器**
 
-**JDK9之后默认的垃圾回收器是G1（Garbage First）垃圾回收器。** 
+**`JDK9`之后默认的垃圾回收器是`G1`（Garbage First）垃圾回收器。** 
 
-- Parallel Scavenge关注吞吐量，允许用户设置最大暂停时间 ，但是会减少年轻代可用空间的大小。 CMS关注暂停时间，但是吞吐量方面会下降。 
+- Parallel Scavenge关注吞吐量，允许用户设置最大暂停时间 ，但是会减少年轻代可用空间的大小。 `CMS`关注暂停时间，但是吞吐量方面会下降。 
 
 - 而G1设计目标就是将上述两种垃圾回收器的优点融合： 
   - 1.支持巨大的堆空间回收，并有较高的吞吐量。 
-  - 2.支持多CPU并行垃圾回收。 3.允许用户设置最大暂停时间。
+  - 2.支持多CPU并行垃圾回收。 
+  - 3.允许用户设置最大暂停时间。
+  
 
-- JDK9之后强烈建议使用G1垃圾回收器。
+> **`JDK9`之后强烈建议使用`G1`垃圾回收器。**
 
-**G1垃圾回收器 – 内存结构**
+**`G1`垃圾回收器 – 内存结构**
 
-G1出现之前的垃圾回收器，内存结构一般是连续的，如下图：
+`G1`出现之前的垃圾回收器，内存结构一般是连续的，如下图：
 
 ![image-20240306161418800](Java.assets/image-20240306161418800.png)
 
-G1的整个堆会被划分成多个大小相等的区域，称之为`区Region`，区域不要求是连续的。分为Eden、Survivor、 Old区。Region的大小通过`堆空间大小/2048`计算得到，也可以通过参数`-XX:G1HeapRegionSize=32m`指定(其中32m指定region大小为32M)，Region size必须是2的指数幂，取值范围从1M到32M。
+`G1`的整个堆会被划分成**多个大小相等的区域**，称之为`区Region`，区域不要求是连续的。分为Eden、Survivor、 Old区。Region的大小通过`堆空间大小/2048`计算得到，也可以通过参数`-XX:G1HeapRegionSize=32m`指定(其中`32m`指定region大小为`32M`)，Region size必须是2的指数幂，取值范围从`1M到32M`。
 
 <img src="Java.assets/image-20240306161436973.png" alt="image-20240306161436973" style="zoom: 50%;" />
 
-G1垃圾回收有两种方式：
+`G1`垃圾回收有两种方式：
 
-1、年轻代回收（Young GC）
+1、年轻代回收（`Young GC`）
 
-- 年轻代回收（Young GC），回收Eden区和Survivor区中不用的对象。会导致STW，G1中可以通过参数 `-XX:MaxGCPauseMillis=n`（默认200） 设置每次垃圾回收时的最大暂停时间毫秒数，G1垃圾回收器会尽可能地保证暂停时间。
+- 年轻代回收（`Young GC`），回收Eden区和Survivor区中不用的对象。会导致`STW`，`G1`中可以通过参数 `-XX:MaxGCPauseMillis=n`（默认200） 设置每次垃圾回收时的最大暂停时间毫秒数，`G1`垃圾回收器会尽可能地保证暂停时间。
 - 执行流程
-  - 1、新创建的对象会存放在Eden区。当G1判断年轻代区不足（max默认60%），无法分配对象时需要回收时会执行 Young GC。
+  - 1、新创建的对象会存放在Eden区。当`G1`判断年轻代区不足（max默认60%），无法分配对象时需要回收时会执行 Young GC。
   - 2、标记出Eden和Survivor区域中的存活对象。
   - 3、根据配置的最大暂停时间选择某些区域将存活对象复制到一个新的Survivor区中（年龄+1），清空这些区域。
-    - G1在进行Young GC的过程中会去记录每次垃圾回收时每个Eden区和Survivor区的平均耗时，以作为下次回收时的 参考依据。这样就可以根据配置的最大暂停时间计算出本次回收时最多能回收多少个Region区域了。比如 `-XX:MaxGCPauseMillis=n`（默认200），每个Region回收耗时40ms，那么这次回收最多只能回收4个Region。
-  - 4、后续Young GC时与之前相同，只不过Survivor区中存活对象会被搬运到另一个Survivor区。 
+    - `G1`在进行`Young GC`的过程中会去记录每次垃圾回收时每个Eden区和Survivor区的平均耗时，以作为下次回收时的 参考依据。这样就可以根据配置的最大暂停时间计算出本次回收时最多能回收多少个Region区域了。比如 `-XX:MaxGCPauseMillis=n`（默认200），每个Region回收耗时`40ms`，那么这次回收最多只能回收4个Region。
+  - 4、后续`Young GC`时与之前相同，只不过`Survivor`区中存活对象会被搬运到另一个`Survivor`区。 
   - 5、当某个存活对象的年龄到达阈值（默认15），将被放入老年代。
-  - 6、部分对象如果大小超过Region的一半，会直接放入老年代，这类老年代被称为`Humongous区`。比如堆内存是 4G，每个Region是2M，只要一个大对象超过了1M就被放入Humongous区，如果对象过大会横跨多个Region。
-  - 7、多次回收之后，会出现很多Old老年代区，此时总堆占有率达到阈值时 （`-XX:InitiatingHeapOccupancyPercent默认45%`）会触发混合回收MixedGC。回收所有年轻代和部分老年代的对象以及大对象区。采用复制算法来完成。
+  - 6、部分对象如果大小超过Region的一半，会直接放入老年代，这类老年代被称为`Humongous区`。比如堆内存是 4G，每个Region是`2M`，只要一个大对象超过了`1M`就被放入Humongous区，如果对象过大会横跨多个Region。
+  - 7、多次回收之后，会出现很多Old老年代区，此时总堆占有率达到阈值时 （`-XX:InitiatingHeapOccupancyPercent默认45%`）会触发混合回收`MixedGC`。回收所有年轻代和部分老年代的对象以及大对象区。采用复制算法来完成。
 
-2、混合回收（Mixed GC）
+2、混合回收（`Mixed GC`）
 
-混合回收分为：
+- 混合回收分为：
 
-- 初始标记（initial mark）
-- 并发标记（concurrent mark）
-- 最终标记（remark或者Finalize Marking）
-- 并发清理（cleanup）
+  - 初始标记（initial mark）
 
-G1对老年代的清理会选择存活度最低的区域来进行回收，这样可以保证回收效率最高，这也是G1（Garbage first）名称的由来。
+  - 并发标记（concurrent mark）
+
+  - 最终标记（remark或者Finalize Marking）
+
+  - 并发清理（cleanup）
+
+
+`G1`对老年代的清理会选择存活度最低的区域来进行回收，这样可以保证回收效率最高，这也是`G1（Garbage first）`名称的由来。
 
 ![image-20240306162536173](Java.assets/image-20240306162536173.png)
 
 最后清理阶段使用复制算法，不会产生内存碎片。
 
-![image-20240306162610653](Java.assets/image-20240306162610653.png)
+<img src="Java.assets/image-20240306162610653.png" alt="image-20240306162610653" style="zoom: 50%;" />
 
-**FULL GC**：注意：如果清理过程中发现没有足够的空Region存放转移的对象，会出现Full GC。单线程执行标记-整理算法， 此时会导致用户线程的暂停。所以尽量保证应该用的堆内存有一定多余的空间。
+**`FULL GC`**：注意：如果清理过程中发现没有足够的空Region存放转移的对象，会出现`Full GC`。单线程执行标记-整理算法， 此时会导致用户线程的暂停。所以尽量保证应该用的堆内存有一定多余的空间。
 
 <img src="Java.assets/image-20240306162641789.png" alt="image-20240306162641789" style="zoom:50%;" />
 
@@ -1907,7 +1973,7 @@ G1对老年代的清理会选择存活度最低的区域来进行回收，这样
 | 介绍     | 参数1： `-XX:+UseG1GC` 打开G1的开关， JDK9之后默认不需要打开 <br />参数2：`-XX:MaxGCPauseMillis=毫秒值`  最大暂停的时间 |
 | 回收年代 | 年轻代+老年代                                                |
 | 回收算法 | **复制算法**                                                 |
-| 优点     | 对比较大的堆如超过6G的堆回收时，延迟可控 不会产生内存碎片，并发标记的SATB算法效率高 |
+| 优点     | 对比较大的堆如超过6G的堆回收时，延迟可控不会产生内存碎片，并发标记的SATB算法效率高 |
 | 缺点     | JDK8之前还不够成熟                                           |
 | 适用场景 | JDK8最新版本、JDK9之后建 议默认使用                          |
 
@@ -1946,14 +2012,25 @@ G1对老年代的清理会选择存活度最低的区域来进行回收，这样
 
 > 常见的垃圾回收器有哪些？
 
-| 垃圾回收器                                  | 应用                                                 |
-| ------------------------------------------- | ---------------------------------------------------- |
-| `Serial`和`SerialOld`组合关系               | 单线程，主要适用于单核CPU场景                        |
-| `parNew`和`CMS`组合关系                     | 暂停时间较短，适用于大型互联网应用中与用户交互的部分 |
-| `Parallel Scavenge`和`Parallel Old`组合关系 | 吞吐量高，适用于后台进行大量数据操作                 |
-| `G1`                                        | 暂停时间较短，适用于大型互联网应用中与用户交互的部分 |
+| 垃圾回收器                                  | 应用                                                  |
+| ------------------------------------------- | ----------------------------------------------------- |
+| `Serial`和`SerialOld`组合关系               | 单线程，主要适用于单核CPU场景                         |
+| `parNew`和`CMS`组合关系                     | 暂停时间较短，适用于大型互联网应用中与用户交互的部分  |
+| `Parallel Scavenge`和`Parallel Old`组合关系 | 吞吐量高，适用于后台进行大量数据操作                  |
+| `G1`                                        | 暂停时间较短，适用于大型互联网应用中与用户交互的部分8 |
 
-------
+> 什么时候触发`Young GC`
+
+ 当Eden区满了的时候，会触发`Young GC`
+
+> 什么情况下进行`Full GC`
+
+1. 在发生`Young GC`的时候，虚拟机会检测之前每次晋升到老年代的平均大小是否大于年老代的剩余空间，如果大于，则直接进行Full GC；如果小于，但设置了`Handle PromotionFailure`，那么也会执行Full GC。
+2. 永久代空间不足，会触发`Full GC`
+3. `System.gc()`也会触发`Full GC`
+4. 堆中分配很大的对象
+
+
 
 ## 内存调优
 
@@ -1998,6 +2075,678 @@ G1对老年代的清理会选择存活度最低的区域来进行回收，这样
 
 ------
 
+# Spring
+
+## 过滤器和拦截器
+
+### 过滤器Filter
+
+概述：
+
+- 概念：Filter过滤器，是JavaWeb三大组件（Servlet、Filter、Listener）之一
+- 过滤器可以把对资源的请求拦截下来，从而实现一些特殊的功能
+- 过滤器一般完成一些通用的操作，比如登录校验、统一编码处理、敏感字符处理等
+
+快速入门
+
+- 定义Filter：定义一个类，实现Filter接口，并重写其中所有方法
+- 配置Filter：Filter类上加`@WebFilter(urlPatterns="/*")`注解，配置拦截的资源。引导类上加`@ServiceComponentScan`开启Servlet组件支持
+
+执行流程
+
+- 请求->放行前逻辑->放行->资源->放行后逻辑
+- 放行后访问对应资源，资源访问完成后，还会回到Filter中吗？会
+- 如果回到Filter中，是重新执行还是执行放行后的逻辑呢？执行放行后的逻辑
+
+拦截路径
+
+- ```java
+  @WebFilter(urlPatterns="/*")
+  public class DemoFilter implements Filter{}
+  ```
+
+- Filter可以根据需求，配置不同的拦截资源路径
+
+- 拦截具体路径：`urlPatterns = "/login"`, 只有访问login路径时，才会被拦截
+
+- 目录拦截：`urlPatterns = '/emps/*'`，访问/emps下的所有资源，都会被拦截
+
+- 拦截所有：`urlPatterns = '/*'`，访问所有资源，都会被拦截
+
+过滤器链
+
+- 介绍：在一个web应用中，可以配置多个过滤器，这样多个过滤波器就形成了一个过滤器链
+- 顺序：注解配置的Filter，优先级是按照**过滤器类名（字符串）的自然排序**
+
+应用：登录校验Filter
+
+- 所有的请求，拦截到了之后，都需要校验令牌吗？**有一个例外，登录请求**
+- 拦截到请求后，什么情况下放行，执行业务操作？**有令牌，且令牌校验通过（合法）；否则都返回未登录错误结果**
+
+- <img src="Java.assets/image-20240318093711284.png" alt="image-20240318093711284" style="zoom:50%;" />
+
+### 拦截器Interceptor
+
+概述
+
+- 概念：是一种动态拦截方法调用的机制，类似于过滤器。spring框架中提供的，用来动态拦截控制器方法的执行
+
+- 作用：拦截请求，在指定的方法调用前后，根据业务需要执行预先设定的代码
+
+快速入门
+
+- 定义拦截器，实现`HandlerInterceptor`接口，并重写其所有方法
+- 注册拦截器：
+
+```java
+public class LoginInterceptor implements HandlerInterceptor {
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 1.判断是否需要拦截（ThreadLocal中是否有用户）
+        if (UserHolder.getUser() == null) {
+            // 没有，需要拦截，设置状态码
+            response.setStatus(401);
+            // 拦截
+            return false;
+        }
+        // 有用户，则放行
+        return true;
+    }
+}
+
+
+public class RefreshTokenInterceptor implements HandlerInterceptor {
+
+    private final StringRedisTemplate stringRedisTemplate;
+
+    public RefreshTokenInterceptor(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 1.获取请求头中的token
+        String token = request.getHeader("LOGIN_USER_KEY");
+        if (StrUtil.isBlank(token)) {
+            return true;
+        }
+        // 2.基于TOKEN获取redis中的用户
+        String key = LOGIN_USER_KEY + token;
+        Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(key);
+        // 3.判断用户是否存在
+        if (userMap.isEmpty()) {
+            return true;
+        }
+        // 5.将查询到的hash数据转为UserDTO
+        UserDTO userDTO = BeanUtil.fillBeanWithMap(userMap, new UserDTO(), false);
+        // 6.存在，保存用户信息到 ThreadLocal
+        UserHolder.saveUser(userDTO);
+        // 7.刷新token有效期
+        stringRedisTemplate.expire(key, LOGIN_USER_TTL, TimeUnit.MINUTES);
+        // 8.放行
+        return true;
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        // 移除用户
+        UserHolder.removeUser();
+    }
+}
+```
+
+```java
+/**
+ * 注册拦截器
+ */
+@Configuration
+public class MvcConfig implements WebMvcConfigurer {
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // 拦截所有请求
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).order(0);
+        // 拦截部分请求
+        registry.addInterceptor(new LoginInterceptor())
+                .excludePathPatterns(
+                        "/user/code",
+                        "/user/login",
+                        "/blog/hot",
+                        "/shop/**",
+                        "/shop-type/**",
+                        "/voucher/**"
+                ).order(1);
+    }
+}
+```
+
+拦截路径
+
+- 拦截器可以根据需求，配置不同的拦截路径
+- <img src="Java.assets/interceptor拦截路径.png" alt="image-20240318093711284"  />
+
+- 执行流程
+- ![image-20240318094603774](Java.assets/image-20240318094603774.png)
+
+### 二者差别
+
+**实现原理不同**
+
+- 过滤器基于函数回调的，一般自定义过滤器都会有一个doFilter()方法，这个方法有一个FilterClain参数，它是一个回调接口;
+- 拦截器是基于Java的反射机制（动态代理）实现的
+
+**使用范围不同**
+
+- 过滤器需要实现`javax.serlvet.Filter`接口(`Serlvet`规范中定义的)，也就是说Filter的使用依赖于`Tomcat`容器，导致它只能再web程序中使用
+- 拦截器是一个Spring组件，并由Spring容器管理，并不依赖于Tomcat等容器，可以单独使用，需要实现`HandlerInterceptor`接口
+
+**使用场景不同**
+
+- 拦截器主要用来实现项目中的业务判断，比如日志记录，权限判断等业务
+- 过滤器通常是用来实现通用功能过滤，比如敏感词过滤、响应数据压缩等功能
+
+**触发时机不同**
+
+- 过滤器Filter是在请求进入容器后，但在进入servlet之前进行预处理，请求结束是在servlet处理完以后
+- 拦截器 Interceptor 是在请求进入servlet后，在进入Controller之前进行预处理的，Controller 中渲染了 对应的视图之后请求结束
+
+**拦截范围不同**
+
+- 请求的执行顺序是：**请求进入容器 -> 进入过滤器 -> 进入 Servlet -> 进入拦截器 -> 执行控制器**。
+- 过滤器`Filter`会拦截所有的资源，而`Interceptor`只会拦截`Spring`环境中的资源
+
+------
+
+## 异常处理
+
+全局异常处理器
+
+- 在类上添加注解：`@RestControllerAdvice = @ControllerAdvice + @ResponseBody` 
+
+- 在方法上添加注解：`@ExceptionHandler`
+
+```java
+@Slf4j
+@RestControllerAdvice
+public class WebExceptionAdvice {
+
+    @ExceptionHandler(RuntimeException.class)
+    public Result handleRuntimeException(RuntimeException e) {
+        log.error(e.toString(), e);
+        return Result.fail("服务器异常");
+    }
+}
+```
+
+------
+
+## 事务管理
+
+概念：事务是一组操作的集合，它是一个不可分割的工作单位，这些操作要么同时成功，要么同时失败
+
+操作：
+
+- 开启事务（一组操作开始前，开启事务）：start transaction / begin
+- 提交事务(这组操作全部成功后，提交事务)：commit
+- 回滚事务(中间任何一个操作出现失误，回滚事务）：rollback
+
+**Spring事务管理**
+
+事务就是一系列的操作原子执行。Spring事务机制主要包括声明式事务和编程式事务。
+
+- 编程式事务：通过编程的方式管理事务，这种方式带来了很大的灵活性，但很难维护。 
+- 声明式事务：将事务管理代码从业务方法中分离出来，通过`aop`进行封装。Spring声明式事务使得我们无需要去处理获得连接、关闭连接、事务提交和回滚等这些操作。使用 `@Transactional` 注解开启声明式事务。
+
+`@transactional`注解使用：
+
+- 注解：`@transactional`
+- 位置：业务service层的方法上，类上，接口上
+- 作用：将当前方法交给spring进行事务管理，方法执行前，开启事务；成功执行完毕，提交事务；出现异常，回滚事务
+
+事务属性
+
+- 1、回滚`rollbackFor`
+
+  - 默认情况下，只有出现`RuntimeException`才回滚异常。`rollbackFor`属性用于控制出现何种异常类型，回滚事务
+  - `@Transactional(rollbackFor = Exception.class)`
+
+- 2、传播行为`propagation`
+
+  - 事务传播行为：指的是当一个事务方法被另一个事务方法调用时，这个事务方法应该如何进行事务控制。
+  - `REQUIRED`：大部分情况下都是用该传播行为即可。
+  - `REQUIRES_NEW`：当我们不希望事务之间相互影响时，可以使用该传播行为。比如：下订单前需要记录日志，不论订单保存成功与否，都需要日志记录能够记录成功。
+
+  | 属性值        | 含义                                                         |
+  | ------------- | ------------------------------------------------------------ |
+  | **REQUIRED**  | 【默认值】需要事务，有则加入，无则创建新事务                 |
+  | REQUIRES_NEW  | 需要新事务，无论有无，总是创建新事务                         |
+  | SUPPORTS      | 支持事务，有则加入，无则在无事务状态中运行                   |
+  | NOT_SUPPORTED | 不支持事务，在无事务状态下运行，如果当前存在已有事务，则挂起当前事务 |
+  | MANDATORY     | 必须有事务，否则抛异常                                       |
+  | NEVER         | 必须没事务，否则抛异常                                       |
+  | ...           |                                                              |
+
+> 使用`PROPAGATION_REQUIRES_NEW`时，内层事务与外层事务是两个独立的事务。一旦内层事务进行了提 交后，外层事务不能对其进行回滚。两个事务互不影响。
+
+> Spring事务在什么情况下会失效？
+>
+> - **访问权限问题**：即事务方法的访问权限必须定义成`public`
+> - **方法用final修饰**：因为spring事务底层使用了`aop`，也就是通过`jdk`动态代理或者`cglib`，帮我们生成了代理类，在代理类中实现的事务功能。但如果某个方法用final修饰了，那么在它的代理类中，就无法重写该方法，而添加事务功能。
+> - 对象没有被Spring管理：使用spring事务的前提是：对象要被spring管理，需要创建bean实例。
+> - 表不支持事务：`MyISAM`存储引擎不支持事务
+> - 方法内部调用：
+> - 未开启事务：
+> - 吞了异常：
+
+**方法内部调用详解：**
+
+- update方法上面没有加 `@Transactional` 注解，调用有 **`@Transactional`** 注解的 `updateOrder` 方法，`updateOrder` 方法上的事务会失效。因为发生了自身调用，调用该类自己的方法，而没有经过 Spring 的代理类，只有在外部调用事务才会生效。
+
+```java
+@Service public class OrderServiceImpl implements OrderService {
+    public void update(Order order) { 
+        this.updateOrder(order);
+    }
+    @Transactional 
+    public void updateOrder(Order order) { // update order
+    }
+}
+```
+
+解决方法：
+
+1、再声明一个service，将内部调用改为外部调用；
+
+2、使用编程式事务；
+
+3、使用`AopContext.currentProxy()`获取代理对象
+
+```java
+@Servcie public class OrderServiceImpl implements OrderService {
+    public void update(Order order) { 
+        ((OrderService)AopContext.currentProxy()).updateOrder(order);
+    }
+    @Transactional public void updateOrder(Order order) { // update order
+    }
+}
+```
+
+> **Spring如何解决循环依赖的问题？**
+>
+> 首先，有两种Bean注入的方式：构造器注入和属性注入。
+>
+> - 对于构造器注入的循环依赖，Spring处理不了，会直接抛出`BeanCurrentlylnCreationException`异常。
+>
+> - 对于属性注入的循环依赖（**单例模式下**），是通过**三级缓存处理**来循环依赖的。而非单例对象的循环依赖，则无法处理。
+
+> **单例模式下属性注入的循环依赖是怎么处理的？**
+>
+> 首先，Spring单例对象的初始化大略分为三步：
+>
+> 1. `createBeanInstance`：实例化bean，使用构造方法创建对象，为对象分配内存。 
+> 2. `populateBean`：进行依赖注入。 
+> 3. `initializeBean`：初始化bean。
+>
+> Spring为了解决**单例的循环依赖**问题，使用了三级缓存： 
+>
+> 1. `singletonObjects`：完成了初始化的单例对象map，`bean name --> bean instance` 
+> 2. `earlySingletonObjects`：完成实例化未初始化的单例对象map，`bean name --> bean instance` 
+> 3. `singletonFactories`： 单例对象工厂map，`bean name --> ObjectFactory`，单例对象实例化完成之后会加入`singletonFactories`。 
+>
+> 在调用`createBeanInstance`进行实例化之后，会调用`addSingletonFactory`，将单例对象放到`singletonFactories`中。
+>
+> 举个例子：
+>
+> 假如A依赖了B的实例对象，同时B也依赖A的实例对象。
+>
+> 1. A首先完成了实例化，并且将自己添加到`singletonFactories`中 。
+> 2. 接着进行依赖注入，发现自己依赖对象B，此时就尝试去get(B) 。
+> 3. 发现B还没有被实例化，对B进行实例化。
+> 4. 然后B在初始化的时候发现自己依赖了对象A，于是尝试get(A)，尝试一级缓存`singletonObjects`和二级缓存`earlySingletonObjects`没找到，尝试三级缓存`singletonFactories`，由于A初始化时将自己添加到了`singletonFactories`，所以B可以拿到A对象，然后将A从三级缓存中移到二级缓存中。
+>
+> 5. B拿到A对象后顺利完成了初始化，然后将自己放入到一级缓存`singletonObjects`中。
+> 6. 此时返回A中，A此时能拿到B的对象顺利完成自己的初始化。
+
+> **Spring中实例化和初始化的区别？**
+>
+> 1. 实例化（Instantiation）：实例化是指创建 Bean 对象的过程，即根据配置信息或注解等方式，Spring 容器通过反射或其他手段创建 Bean 的实例。实例化阶段是指对象通过 new 关键字或反射等方式从类定义创建出来的阶段。
+> 2. 初始化（Initialization）：初始化是指创建的 Bean 对象完成实例化后，进行一系列初始化操作的过程。在 Spring 中初始化一般会涉及到依赖注入、属性设置、调用初始化方法等步骤。可以通过配置 init-method 属性、`@PostConstruct` 注解等方式指定初始化方法。
+>
+> 实例化是对象创建的阶段，而初始化是对象完成创建后进行初始化操作的阶段。
+
+## 控制反转IoC
+
+[IOC源码](https://javadoop.com/post/spring-ioc)
+
+含义：**IoC（Inversion of Control:控制反转）** 是一种**设计思想**，而不是一个具体的技术实现。`IoC` 的思想就是将原本在程序中手动创建对象的控制权，交由 Spring 框架来管理。不过， `IoC` 并非 Spring 特有，在其他语言中也有应用。
+
+- **控制**：指的是对象创建（实例化、管理）的权力
+- **反转**：控制权交给外部环境（Spring 框架、IoC 容器）
+
+核心思想：资源不由使用资源者管理，而是由统一的第三方管理。
+
+解决问题：
+
+- 对象之间的耦合度或者说依赖程度降低；
+- 资源变的容易管理；比如你用 Spring 容器提供的话很容易就可以实现一个单例。
+
+好处：
+
+- 资源集中管理，实现资源的可配置和易管理
+- 降低了使用资源双方的依赖程度（耦合度）
+
+## 依赖注入DI
+
+**依赖注入DI：是IoC 最常见以及最合理的实现方式**
+
+> spring-context 会自动将 spring-core、spring-beans、spring-aop、spring-expression 这几个基础 jar 包带进来。
+
+在Spring创建对象的过程中，把对象依赖的属性注入到对象中。
+
+依赖注入主要有两种方式：**构造器注入和属性注入**。
+
+`IOC`**容器初始化过程**
+
+1. 从XML中读取配置文件。 
+2. 将bean标签解析成 `BeanDefinition`，如解析 `property` 元素， 并注入到 `BeanDefinition` 实例中。 、
+3. 将 `BeanDefinition` 注册到容器 `BeanDefinitionMap` 中。
+4. `BeanFactory` 根据 `BeanDefinition` 的定义信息创建实例化和初始化 bean。
+
+> 单例bean的初始化以及依赖注入一般都在**容器初始化**阶段进行，只有懒加载（`lazy-init=true`）的单例 bean是在应用第一次调用`getBean()`时进行初始化和依赖注入。
+>
+> 多例bean 在容器启动时不实例化，即使设置 `lazy-init 为 false` 也没用，只有调用了`getBean()`才进行实例化。
+
+## Bean的生命周期
+
+![image-20240330152841862](Java.assets/image-20240330152841862.png)
+
+1. 调用bean的构造方法创建Bean
+
+2. 通过反射调用setter方法进行属性的依赖注入
+
+3. 如果Bean实现了`BeanNameAware`接口，Spring将调用`setBeanName ()`，设置 Bean的name（`xml`文件中bean标签的id）
+
+4. 如果Bean实现了`BeanFactoryAware`接口，Spring将调用`setBeanFactory()`把bean factory设置给 Bean
+
+5. 如果存在`BeanPostProcessor`，Spring将调用它们的`postProcessBeforeInitialization`（预初 始化）方法，在Bean初始化前对其进行处理
+
+6. 如果Bean实现了`InitializingBean`接口，Spring将调用它的`afterPropertiesSet`方法，然后调用 xml定义的 `init-method` 方法，两个方法作用类似，都是在初始化 bean 的时候执行 
+7. 如果存在`BeanPostProcessor`，Spring将调用它们的`postProcessAfterInitialization`（后初始 化）方法，在Bean初始化后对其进行处理 
+8. Bean初始化完成，供应用使用，这里分两种情况：
+   - 如果Bean为单例的话，那么容器会返回Bean给用户，并存入缓存池。如果Bean实现了 `DisposableBean`接口，Spring将调用它的`destory`方法，然后调用在`xml`中定义的 `destory-method` 方法，这两个方法作用类似，都是在Bean实例销毁前执行。
+   - 如果Bean是多例的话，容器将Bean返回给用户，剩下的生命周期由用户控制。
+
+
+
+> `BeanFactory`和`FactoryBean`的区别？
+>
+> 
+>
+> 
+
+## 面向切面编程AOP
+
+**概述**
+
+- AOP：Aspect Oriented Programming(面向切面编程，面向方法编程)，其实就是**面向特定方法编程**，作为面向对象的一种补充，将公共逻辑（事务管理、日志、缓存等）封装成切面，跟业务代码分离，可以减少系统的重复代码和降低模块之间的耦合度
+- 场景：统计每一个业务方法的执行耗时
+- 实现：**动态代理**，SpringAOP是Spring框架的高级技术，只在管理bean对象的过程中，主要通过**底层的动态代理机制**，对特定的方法进行编程
+
+> **`JDK`动态代理和`CGLIB`动态代理的区别？**
+>
+> `JDK`动态代理
+>
+> - 如果目标类实现了接口，`Spring AOP`会选择使用`JDK`动态代理目标类。代理类根据目标类实现的接口动态生成，不需要自己编写，生成的动态代理类和目标类都实现相同的接口。`JDK`动态代理的核心是`InvocationHandler`接口和Proxy类。
+> - 缺点：**目标类必须有实现的接口**。如果某个类没有实现接口，那么这个类就不能用JDK动态代理。
+>
+> `CGLIB`动态代理
+>
+> - 通过继承实现。如果目标类没有实现接口，那么`Spring AOP`会选择使用`CGLIB`来动态代理目标类。 `CGLIB（Code Generation Library）`可以在运行时动态生成类的字节码，动态创建目标类的子类对象，在子类对象中增强目标类。
+> - 缺点：`CGLIB`是通过继承的方式做的动态代理，因此如果某个类被标记为final，那么它是无法使用`CGLIB`做动态代理的。
+> - 优点：**目标类不需要实现特定的接口，更加灵活。**
+>
+> 什么时候采用哪种动态代理？
+>
+> - 如果目标对象实现了接口，默认情况下会采用`JDK`的动态代理实现`AOP` 
+> - 如果目标对象实现了接口，可以强制使用`CGLIB`实现`AOP`
+> - 如果目标对象没有实现了接口，必须采用`CGLIB`库
+>
+> 二者区别
+>
+> - **实现方式不同**：`jdk`动态代理使用`jdk`中的类`Proxy`来创建代理对象，它使用反射技术来实现，不需要导入其他依赖。`cglib`需要引入相关依赖：`asm.jar`，它使用字节码增强技术来实现。
+> - **默认使用方式不同**：当目标类实现了接口的时候`Spring Aop`默认使用`jdk`动态代理方式来增强方法，没有实现接口的时候使用`cglib`动态代理方式增强方法。
+
+**核心概念**
+
+- **连接点**：`JoinPoint`，可以被AOP控制的方法（暗含方法执行时的相关信息）
+- **通知**：`Advice`，指哪些重复的逻辑，也就是共性功能（最终体现为一个方法）
+- **切入点**：`PointCut`，匹配连接点的条件，通知仅会在切入点方法执行时被调用
+- **切面**：`Aspect`，描述通知与切入点的对应关系（通知+切入点）
+- **目标对象**：`Target`，通知所应用的对象
+- ![aop](Java.assets/aop.png)
+
+**执行流程**：运行的不再是原始对象，而是基于目标对象所生成的代理对象
+
+**通知类型及顺序**
+
+通知类型
+
+- `@Around`：环绕通知，此注解标注的通知方法在目标方法前、后都被执行
+- `@Before`：前置通知，此注解标注的通知方法在目标方法前都被执行
+- `@After`：后置通知，此注解标注的通知方法在目标方法后都被执行
+- `@AfterReturning`：返回后通知，，此注解标注的通知方法在目标方法后被执行，有异常不会执行
+- `@AfterThrowing`：异常后通知，，此注解标注的通知方法发生异常后执行
+
+通知顺序：
+
+- 当有多个切面的切入点都匹配到了目标方法，目标方法运行时，多个通知方法都会被执行
+- 执行顺序
+  - 不同切面类中，默认按照**切面类的类名字母**排序
+    - 目标方法前的通知方法：字母排序靠前的先执行
+    - 目标方法后的通知方法：字母排名靠前的后执行
+  - 用`@Order(数字)`加在切面类上来控制顺序
+    - 目标方法前的通知方法：数字小的先执行
+    - 目标方法后的通知方法：数字小的后执行
+
+**切入点表达式**
+
+- 概念：描述切入点方法一种表达式
+
+- 作用：主要用来决定项目中的哪些方法需要加入通知
+
+- 常见形式
+
+  - `execution(...)`：根据方法的签名来匹配
+
+    - ```java
+      @Around("execution(* com.cug.service.impl.*.*(..))")
+      public Object recordTime(ProceedingJoinPoint joinPoint) throws Throwable {}
+      ```
+
+    - `execution(访问修饰符？返回值 包名.类名.?方法名(方法参数) throws 异常？)`
+
+    - 其中带？的表示可以省略的部分
+
+      - 访问修饰符：可省略
+      - 包名.类名：可省略
+      - throws 异常：可省略
+
+    - 可以使用通配符描述切入点
+
+      - `*`：单个独立的任意符号，可以通配任意返回值、包名、类名、方法名、任意类型的一个参数，也可以通配包、类、方法名的一部分
+      - `..` ：多个连续的任意符号，可以统配任意层级的包，或任意类型、任意个数的参数
+
+    - 注意事项：根据业务需要，可以使用`且（&&）、或（||）、非（！）`来组合比较复杂的切入点表达式
+
+    - 书写建议
+
+      - 所有**业务方法名在命名时尽量规范**，方便切入点表达式快速匹配。如：查询类方法都是find开头，更新类方法都是update开头
+      - 描述切入点方法通常基于**接口描述**，而不是直接描述实现类，增强拓展性
+      - 在满足业务需要的前提下，**尽量缩小切入点的匹配范围**。如报名匹配尽量不使用.. ，使用*匹配单个包
+
+  - `@annotation(...)`：根据注解匹配
+
+    - ```java
+      @Retention(RetentionPolicy.RUNTIME)
+      @Target(ElementType.METHOD)
+      public @interface Log {
+      }
+      ```
+
+    - ```java
+      @Around("@annotation(com.cug.anno.Log)")
+      public Object recordLog(ProceedingJoinPoint joinPoint) throws Throwable {}
+      ```
+
+    - @annotation切入点表达式，用于匹配标识有特定注解的方法
+
+    - 使用步骤：定义一个注解，将该注解放到对应的方法上
+
+**快速入门**
+
+- AOP:记录每个方法的耗时
+
+  - 导入依赖：`spring-boot-starter-aop`
+
+  - ```java
+    @Slf4j
+    @Component
+    // @Aspect // AOP类
+    public class TimeAspect {
+    
+        @Pointcut("execution(* com.cug.service.impl.*.*(..))")
+        private void pt() {
+        }
+    
+        @Around("pt()")
+        public Object recordTime(ProceedingJoinPoint joinPoint) throws Throwable {
+            // 1.记录开始时间
+            long begin = System.currentTimeMillis();
+            // 2.运行原始方法
+            Object result = joinPoint.proceed();
+            // 3.获取方法运行结束时间，计算执行耗时
+            long end = System.currentTimeMillis();
+            log.info(joinPoint.getSignature() + "方法执行耗时：{}ms", end - begin);
+            return result;
+        }
+    }
+    ```
+
+- 事务管理
+
+- 权限控制
+
+- 记录操作日志
+
+**连接点**
+
+在Spring中用`JoinPoint`抽象了连接点，用它可以获得方法执行时的相关信息，如目标类名，方法名，方法参数等
+
+对于@Around 通知，获取连接点信息只能使用`ProceedingJoinPoint`
+
+对于其它四种通知，获取连接点信息只能使用`JoinPoint`，它是`ProceedingJoinPoint`的父类型
+
+------
+
+## SpringMVC
+
+定义：`SpringMVC`是一种基于 Java 的实现`MVC`设计模型的请求驱动类型的轻量级Web框架，属于Spring框架 的一个模块。它通过一套注解，让一个简单的Java类成为处理请求的控制器，而无须实现任何接口。同时它还支持`RESTful`编程风格的请求。
+
+优点：
+
+1. 与 Spring 集成使用非常方便，生态好。 
+2. 配置简单，快速上手。 
+3. 支持 `RESTful` 风格。
+4. 支持各种视图技术，支持各种请求资源映射策略。
+
+工作原理
+
+1. `DispatcherServlet` 接收用户的请求 
+2. 找到用于处理request的 `handler` 和 `Interceptors`，构造成 `HandlerExecutionChain` 执行链
+3. 找到 `handler` 相对应的 `HandlerAdapter` 
+4. 执行所有注册拦截器的`preHandler`方法 
+5. 调用 `HandlerAdapter` 的 `handle()` 方法处理请求，返回 `ModelAndView` 
+6. 倒序执行所有注册拦截器的`postHandler`方法
+7. 请求视图解析和视图渲染
+
+![image-20240401112046286](Java.assets/image-20240401112046286.png)
+
+SpringMVC的主要组件：
+
+- 前端控制器（`DispatcherServlet`）：接收用户请求，给用户返回结果。 
+- 处理器映射器（`HandlerMapping`）：根据请求的`url`路径，通过注解或者`xml`配置，寻找匹配的 Handler。
+- 处理器适配器（`HandlerAdapter`）：Handler 的适配器，调用 handler 的方法处理请求。
+- 处理器（Handler）：执行相关的请求处理逻辑，并返回相应的数据和视图信息，将其封装到 ModelAndView对象中。
+- 视图解析器（ViewResolver）：将逻辑视图名解析成真正的视图View。
+- 视图（View）：接口类，实现类可支持不同的View类型（JSP、`FreeMarker`、Excel等）。
+
+Spring MVC的常用注解：
+
+- `@Controller`：用于标识此类的实例是一个控制器。 
+- `@RequestMapping`：映射Web请求（访问路径和参数）。
+- `@ResponseBody`：注解返回数据而不是返回页面 
+- `@RequestBody`：注解实现接收 `http` 请求的 `json` 数据，将 `json` 数据转换为 `java` 对象。 
+- `@PathVariable`：获得URL中路径变量中的值 
+- `@RestController`：`@Controller+@ResponseBody`
+- `@ExceptionHandler`：标识一个方法为全局异常处理的方法。
+
+# Maven
+
+## 分模块设计与开发
+
+- 将项目按照功能分为若干个子模块，方便项目的管理维护、扩展，也方便模块间的相互调用，资源共享
+- 注意事项：分模块设计需要先针对模块功能进行设计，在进行编码。不会湘江工程开发完毕，然后在进行拆分
+
+## 继承和聚合
+
+**继承**
+
+- 继承描述的是两个工程间的关系，与java中的继承相似，子工程可以继承父工程中的配置信息，常见于依赖关系的继承
+- 作用：简化依赖配置、统一管理依赖
+- 实现：`<parent>...</parent>`
+- 版本锁定
+  - ![继承](Java.assets/继承.png)
+  - 在maven中，可以在父工程中的pom文件中通过`<dependencyManagement>`来统一管理依赖版本
+  - 注意事项：子工程引入依赖时，无需指定`<version>`版本号，父工程统一管理。变更依赖本本，只需在父工程中统一变更
+- `<dependencyManagement>`和`<dependencies>`的区别是什么?
+  - <dependencies>是直接依赖，在父工程配置了依赖，子工程会直接继承下来
+  - <dependencyManagement>是统一管理依赖版本，不会直接依赖，还需要在子工程中引入所需依赖（无需指定版本）
+
+**聚合**
+
+- 将多个模块组织成一个整体，同时进行项目的构建
+
+- 聚合工程：一个不具有业务功能的”空“，有且只有一个pom文件
+
+**二者关系**
+
+- 作用
+  - 聚合用于快速构建项目
+  - 继承用于简化依赖配置，统一管理依赖
+- 相同点
+  - 聚合和继承的pom.xml文件打包方式均为pom，可以将两种关系只做到同一个pom文件中
+  - 聚合与继承均属于设计型模块，并无实际的模块内容
+- 不同点
+  - 聚合实在聚合工程中配置关系，聚合可以感知到参与聚合的模块有哪些
+  - 继承是在子模块中配置关系，父模块无法感知哪些子模块继承了自己
+
+## 私服
+
+- 私服是一种特殊的远程仓库，它是架设在局域网内的仓库服务，用来代理位于外部的中央仓库，用于解决团队内部的资源共享与资源同步问题
+- 私服在企业项目开发中，一个项目/公司，只需要一台即可（无需我们自己搭建，会使用即可）
+- 依赖查找顺序：本地仓库->私服->中央仓库
+
+Spring打包方式
+
+- jar：普通模块打包，springboot项目基本都是jar包（内嵌tomcat运行）
+- war：普通web程序打包，需要部署在外部的tomcat服务器中运行
+- pom：父工程或聚合工程，该模块不写代码，仅进行依赖管理
+
+------
+
 # 设计模式
 
 ------
@@ -2024,7 +2773,7 @@ G1对老年代的清理会选择存活度最低的区域来进行回收，这样
 - 高扩展，只要实现了接口，都可以用代理。
 - 智能化，动态代理。
 
-### 1、静态代理
+### 静态代理
 
 以租房为例，我们一般用租房软件、找中介或者找房东。这里的中介就是代理者。
 
@@ -2095,7 +2844,7 @@ public class Main {
 
 这就是静态代理，因为中介这个代理类已经事先写好了，只负责代理租房业务
 
-### 2、强制代理
+### 强制代理
 
 如果我们直接找房东要租房，房东会说我把房子委托给中介了，你找中介去租吧。这样我们就又要交一部分中介费了，真坑。
 
@@ -2192,7 +2941,7 @@ public static void main(String[] args){
 
 看，这样就是强制你使用代理，如果不是代理就没法访问。
 
-### 3、动态代理
+### 动态代理
 
 我们知道现在的中介不仅仅是有租房业务，同时还有卖房、家政、维修等得业务，只是我们就不能对每一个业务都增加一个代理，就要提供通用的代理方法，这就要通过动态代理来实现了。
 
@@ -2287,4 +3036,8 @@ public interface InvocationHandler {
 2. 动态代理，代理类通过 `Proxy.newInstance()` 方法生成。
 3. `JDK`实现的代理中不管是静态代理还是动态代理，代理与被代理者都要实现两样接口，它们的实质是面向接口编程。`CGLib`可以不需要接口。
 4. 动态代理通过 Proxy 动态生成 proxy class，但是它也指定了一个 `InvocationHandler` 的实现类。
+
+# 面试经典问题
+
+> 1、动态代理的实现方式：`JDK`动态代理和`CGLIB`动态代理？
 
