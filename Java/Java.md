@@ -2098,8 +2098,8 @@ Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用
 >
 > 最主要的七大模块：
 >
-> 1. **`Spring Core`**：Spring 核心，它是框架最基础的部分，提供 IoC 和依赖注入 DI 特性。
-> 2. **`Spring Context`**：Spring 上下文容器，它是 BeanFactory 功能加强的一个子接口。
+> 1. **Spring Core**：Spring 核心，它是框架最基础的部分，提供 IoC 和依赖注入 DI 特性。
+> 2. **Spring Context**：Spring 上下文容器，它是 BeanFactory 功能加强的一个子接口。
 > 3. **Spring Web**：它提供 Web 应用开发的支持。
 > 4. **Spring MVC**：它针对 Web 应用中 MVC 思想的实现。
 > 5. **Spring DAO**：提供对 JDBC 抽象层，简化了 JDBC 编码，同时，编码更具有健壮性。
@@ -2109,7 +2109,7 @@ Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用
 > **Spring中的设计模式**
 >
 > 1. **工厂模式** : Spring 容器本质是一个大工厂，使用工厂模式通过 `BeanFactory`、`ApplicationContext` 创建 bean 对象。
-> 2. **代理模式** : Spring AOP 功能功能就是通过代理模式来实现的，分为动态代理和静态代理。
+> 2. **代理模式** : Spring AOP 功能就是通过代理模式来实现的，分为动态代理和静态代理。
 > 3. **单例模式** : Spring 中的 Bean 默认都是单例的，这样有利于容器对 Bean 的管理。
 > 4. **模板模式** : Spring 中 `JdbcTemplate`、`RestTemplate` 等以 Template 结尾的对数据库、网络等等进行操作的模板类，就使用到了模板模式。
 > 5. **观察者模式**: **Spring 事件驱动模型**就是观察者模式很经典的一个应用。
@@ -2130,7 +2130,7 @@ Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用
 
 **Spring事务管理**
 
-事务就是一系列的操作原子执行。Spring事务机制主要包括声明式事务和编程式事务。
+事务就是一系列的操作原子执行。Spring事务机制主要包括**声明式事务和编程式事务**。
 
 - 编程式事务：通过编程的方式管理事务，这种方式带来了很大的灵活性，但很难维护。 
 - 声明式事务：将事务管理代码从业务方法中分离出来，通过`aop`进行封装。Spring声明式事务使得我们无需要去处理获得连接、关闭连接、事务提交和回滚等这些操作。使用 `@Transactional` 注解开启声明式事务。
@@ -2141,7 +2141,7 @@ Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用
 - 位置：业务service层的方法上，类上，接口上
 - 作用：将当前方法交给spring进行事务管理，方法执行前，开启事务；成功执行完毕，提交事务；出现异常，回滚事务
 
-事务属性
+**事务属性**
 
 - 1、回滚`rollbackFor`
 
@@ -2156,7 +2156,7 @@ Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用
 
   | 属性值        | 含义                                                         |
   | ------------- | ------------------------------------------------------------ |
-  | **REQUIRED**  | 【默认值】需要事务，有则加入，无则创建新事务                 |
+  | **REQUIRED**  | 【默认值】需要事务，有则加入当前事务，无则创建新事务         |
   | REQUIRES_NEW  | 需要新事务，无论有无，总是创建新事务                         |
   | SUPPORTS      | 支持事务，有则加入，无则在无事务状态中运行                   |
   | NOT_SUPPORTED | 不支持事务，在无事务状态下运行，如果当前存在已有事务，则挂起当前事务 |
@@ -2164,7 +2164,7 @@ Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用
   | NEVER         | 必须没事务，否则抛异常                                       |
   | ...           |                                                              |
 
-> 使用`PROPAGATION_REQUIRES_NEW`时，内层事务与外层事务是两个独立的事务。一旦内层事务进行了提 交后，外层事务不能对其进行回滚。两个事务互不影响。
+> 使用`PROPAGATION_REQUIRES_NEW`时，内层事务与外层事务是两个独立的事务。一旦内层事务进行了提交后，外层事务不能对其进行回滚。两个事务互不影响。
 
 > Spring事务在什么情况下会失效？
 >
@@ -2176,15 +2176,27 @@ Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用
 > - 未开启事务：
 > - 吞了异常：
 
+**Spring 事务隔离级别**
+
+Spring 的接口 `TransactionDefinition` 中定义了表示隔离级别的常量，当然其实主要还是对应数据库的事务隔离级别：
+
+1. `ISOLATION_DEFAULT`：使用后端数据库默认的隔离界别，`MySQL` 默认可重复读，Oracle 默认读已提交。
+2. `ISOLATION_READ_UNCOMMITTED`：读未提交
+3. `ISOLATION_READ_COMMITTED`：读已提交
+4. `ISOLATION_REPEATABLE_READ`：可重复读
+5. `ISOLATION_SERIALIZABLE`：串行化
+
 **方法内部调用详解：**
 
 - update方法上面没有加 `@Transactional` 注解，调用有 **`@Transactional`** 注解的 `updateOrder` 方法，`updateOrder` 方法上的事务会失效。因为发生了自身调用，调用该类自己的方法，而没有经过 Spring 的代理类，只有在外部调用事务才会生效。
 
 ```java
-@Service public class OrderServiceImpl implements OrderService {
+@Service 
+public class OrderServiceImpl implements OrderService {
     public void update(Order order) { 
         this.updateOrder(order);
     }
+    
     @Transactional 
     public void updateOrder(Order order) { // update order
     }
@@ -2200,11 +2212,13 @@ Java垃圾回收过程会通过单独的`GC线程`来完成，但是不管使用
 3、使用`AopContext.currentProxy()`获取代理对象
 
 ```java
-@Servcie public class OrderServiceImpl implements OrderService {
+@Servcie 
+public class OrderServiceImpl implements OrderService {
     public void update(Order order) { 
         ((OrderService)AopContext.currentProxy()).updateOrder(order);
     }
-    @Transactional public void updateOrder(Order order) { // update order
+    @Transactional
+    public void updateOrder(Order order) { // update order
     }
 }
 ```
