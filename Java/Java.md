@@ -788,6 +788,147 @@ I love JavaGuide
 value is JavaGuide
 ```
 
+## SPI机制
+
+SPI 即 Service Provider Interface ，字面意思就是：“**服务提供者的接口**”，我的理解是：专门提供给服务提供者或者扩展框架功能的开发者去使用的一个接口。
+
+SPI 将服务接口和具体的服务实现分离开来，将服务调用方和服务实现者解耦，能够提升程序的扩展性、可维护性。修改或者替换服务实现并不需要修改调用方。
+
+很多框架都使用了 Java 的 SPI 机制，比如：Spring 框架、数据库加载驱动、日志接口、以及 Dubbo 的扩展实现等等。
+
+具体实现
+
+1、定义接口
+
+```java
+public interface SayService {
+void say();
+}
+```
+
+2、定义实现类
+
+```java
+public class SayChinese implements SayService{
+@Override
+public void say() {
+  System.out.println("你好");
+}
+}
+
+public class SayEnglish implements SayService{
+@Override
+public void say() {
+  System.out.println("hello");
+}
+}
+```
+
+3、配置：在resources的`META-INF.services`目录下根据接口的**全限定名**创建文件，添加实现类的全限定名。
+
+```
+org.example.spi.SayChinese
+org.example.spi.SayEnglish
+```
+
+4、使用`ServiceLoader`加载
+
+```java
+public static void main(String[] args) {
+ServiceLoader<SayService> load = ServiceLoader.load(SayService.class);
+
+for(SayService sayService: load){
+  sayService.say();
+}
+
+Iterator<SayService> iterator = load.iterator();
+while (iterator.hasNext()){
+  SayService sayService = (SayService) iterator.next();
+  sayService.say();
+}
+}
+
+你好
+hello
+你好
+hello
+```
+
+`ServiceLoader`详解
+
+`ServiceLoader` 是 JDK 提供的一个工具类， 位于`package java.util;`包下。
+
+```java
+public final class ServiceLoader<S> implements Iterable<S>{ xxx...}
+
+public static <S> ServiceLoader<S> load(Class<S> service) {
+ ClassLoader cl = Thread.currentThread().getContextClassLoader();
+ return ServiceLoader.load(service, cl);
+}
+
+public static <S> ServiceLoader<S> load(Class<S> service,
+                                     ClassLoader loader) {
+ return new ServiceLoader<>(service, loader);
+}
+
+private ServiceLoader(Class<S> svc, ClassLoader cl) {
+ service = Objects.requireNonNull(svc, "Service interface cannot be null");
+ loader = (cl == null) ? ClassLoader.getSystemClassLoader() : cl;
+ acc = (System.getSecurityManager() != null) ? AccessController.getContext() : null;
+ reload();
+}
+
+public void reload() {
+ providers.clear();
+ lookupIterator = new LazyIterator(service, loader);
+}
+```
+
+根据代码的调用顺序，在 `reload()` 方法中是通过一个内部类 `LazyIterator` 实现的。先继续往下面看。
+
+`ServiceLoader` 实现了 `Iterable` 接口的方法后，具有了迭代的能力，在这个 `iterator` 方法被调用时，首先会在 `ServiceLoader` 的 `Provider` 缓存中进行查找，如果缓存中没有命中那么则在 `LazyIterator` 中进行查找。
+
+```java
+public Iterator<S> iterator() {
+return new Iterator<S>() {
+
+  Iterator<Map.Entry<String, S>> knownProviders
+          = providers.entrySet().iterator();
+
+  public boolean hasNext() {
+      if (knownProviders.hasNext())
+          return true;
+      return lookupIterator.hasNext(); // 调用 LazyIterator
+  }
+
+  public S next() {
+      if (knownProviders.hasNext())
+          return knownProviders.next().getValue();
+      return lookupIterator.next(); // 调用 LazyIterator
+  }
+
+  public void remove() {
+      throw new UnsupportedOperationException();
+  }
+
+};
+}
+```
+
+**SPI和API的区别是什么？**
+
+- SPI - “接口”位于“调用方”所在的“包”中
+
+- API - “接口”位于“实现方”所在的“包”中
+
+**SPI 机制的缺陷**
+
+通过上面的解析，可以发现，我们使用`SPI`机制的缺陷：
+
+- 不能按需加载，需要遍历所有的实现，并实例化，然后在循环中才能找到我们需要的实现。如果不想用某些实现类，或者某些类实例化很耗时，它也被载入并实例化了，这就造成了浪费。
+- 获取某个实现类的方式不够灵活，只能通过 Iterator 形式获取，不能根据某个参数来获取对应的实现类。
+- 多个并发多线程使用 `ServiceLoader` 类的实例是不安全的。
+
 ------
 
 # JVM
@@ -2229,7 +2370,15 @@ public class OrderServiceImpl implements OrderService {
 >
 > - 对于构造器注入的循环依赖，Spring处理不了，会直接抛出`BeanCurrentlylnCreationException`异常。
 >
-> - 对于属性注入的循环依赖（**单例模式下**），是通过**三级缓存处理**来循环依赖的。而非单例对象的循环依赖，则无法处理。
+> - 对于属性注入的循环依赖（**单例模式下**），是通过**三级缓存处理**来循环依赖的。而**非单例对象的循环依赖，则无法处理**。
+>
+> 其次，单例的Bean要初始化完成。需要经历这三步：
+>
+> - 实例化
+> - **属性赋值**
+> - 初始化
+>
+> 注入主要发生在第二步，**属性赋值**，Spring可以在这一步通过**三级缓存**解决循环依赖。
 
 > **单例模式下属性注入的循环依赖是怎么处理的？**
 >
@@ -2239,7 +2388,7 @@ public class OrderServiceImpl implements OrderService {
 > 2. `populateBean`：进行依赖注入。 
 > 3. `initializeBean`：初始化bean。
 >
-> Spring为了解决**单例的循环依赖**问题，使用了三级缓存： 
+> Spring为了解决**单例的循环依赖**问题，使用了**三级缓存**： 
 >
 > 1. `singletonObjects`：完成了初始化的单例对象map，`bean name --> bean instance` 
 > 2. `earlySingletonObjects`：完成实例化未初始化的单例对象map，`bean name --> bean instance` 
@@ -2261,10 +2410,18 @@ public class OrderServiceImpl implements OrderService {
 
 > **Spring中实例化和初始化的区别？**
 >
-> 1. 实例化（Instantiation）：实例化是指创建 Bean 对象的过程，即根据配置信息或注解等方式，Spring 容器通过反射或其他手段创建 Bean 的实例。实例化阶段是指对象通过 new 关键字或反射等方式从类定义创建出来的阶段。
-> 2. 初始化（Initialization）：初始化是指创建的 Bean 对象完成实例化后，进行一系列初始化操作的过程。在 Spring 中初始化一般会涉及到依赖注入、属性设置、调用初始化方法等步骤。可以通过配置 init-method 属性、`@PostConstruct` 注解等方式指定初始化方法。
+> 1. **实例化（Instantiation）**：实例化是指创建 Bean 对象的过程，即根据配置信息或注解等方式，Spring 容器通过反射或其他手段创建 Bean 的实例。实例化阶段是指对象通过 new 关键字或反射等方式从类定义创建出来的阶段。
+> 2. **初始化（Initialization）**：初始化是指创建的 Bean 对象完成实例化后，进行一系列初始化操作的过程。在 Spring 中初始化一般会涉及到依赖注入、属性设置、调用初始化方法等步骤。可以通过配置 `init-method` 属性、`@PostConstruct` 注解等方式指定初始化方法。
 >
 > 实例化是对象创建的阶段，而初始化是对象完成创建后进行初始化操作的阶段。
+
+> **为什么要三级缓存？二级不行吗？**
+>
+> 不行，主要是为了**⽣成代理对象**。如果是没有代理的情况下，使用二级缓存解决循环依赖也是 OK 的。但是如果存在代理，三级没有问题，二级就不行了。
+>
+> 因为三级缓存中放的是⽣成具体对象的匿名内部类，获取 Object 的时候，它可以⽣成代理对象，也可以返回普通对象。使⽤三级缓存主要是为了保证不管什么时候使⽤的都是⼀个对象。
+>
+> 假设只有⼆级缓存的情况，往⼆级缓存中放的显示⼀个普通的 Bean 对象，Bean 初始化过程中，通过 `BeanPostProcessor` 去⽣成代理对象之后，覆盖掉⼆级缓存中的普通 Bean 对象，那么可能就导致取到的 Bean 对象不一致了。
 
 ## IOC
 
@@ -2276,11 +2433,6 @@ public class OrderServiceImpl implements OrderService {
 - **反转**：控制权交给外部环境（Spring 框架、IoC 容器）
 
 核心思想：**资源不由使用资源者管理，而是由统一的第三方管理。**
-
-解决问题：
-
-- 对象之间的耦合度或者说依赖程度降低；
-- 资源变的容易管理；比如你用 Spring 容器提供的话很容易就可以实现一个单例。
 
 好处：
 
@@ -2296,7 +2448,7 @@ public class OrderServiceImpl implements OrderService {
 
 > Spring容器启动阶段的动作？
 >
-> Spring 的 IoC 容器工作的过程，其实可以划分为两个阶段：**容器启动阶段**和**Bean 实例化阶段**。
+> Spring 的 IoC 容器工作的过程，其实可以划分为两个阶段：**容器启动阶段**和 **Bean 实例化阶段**。
 >
 > - 容器启动阶段：主要做的工作是加载和解析配置文件，保存到对应的 Bean 定义中。
 > - Bean实例化阶段：实例化对象、装配依赖、生命周期回调，对象其它处理
@@ -2307,7 +2459,7 @@ public class OrderServiceImpl implements OrderService {
 
 > spring-context 会自动将 spring-core、spring-beans、spring-aop、spring-expression 这几个基础 jar 包带进来。
 
-在Spring创建对象的过程中，把对象依赖的属性注入到对象中。
+在Spring创建对象的过程中，把对象依赖的属性注入到对象中。15
 
 依赖注入主要有两种方式：**构造器注入和属性注入**。
 
@@ -2747,6 +2899,188 @@ public class WebExceptionAdvice {
 
 ------
 
+# 微服务
+
+## 概览
+
+微服务（Microservices）是一种软件架构风格，将一个大型应用程序划分为**一组小型、自治且松耦合的服务**。每个微服务负责执行特定的业务功能，并通过**轻量级通信机制（如HTTP）**相互协作。每个微服务可以独立开发、部署和扩展，使得应用程序更加灵活、可伸缩和可维护。
+
+在微服务的架构演进中，一般可能会存在这样的演进方向：**单体式-->服务化-->微服务**。
+
+微服务与单体服务的区别：在于**规模和部署方式**。微服务将应用程序拆分为更小的、自治的服务单元，每个服务都有自己的数据库和代码库，可以独立开发、测试、部署和扩展，带来了更大的灵活性、可维护性、可扩展性和容错性。
+
+> 挑战：
+
+1. **系统复杂性增加**：一个服务拆成了多个服务，整体系统的复杂性增加，需要处理服务之间的通信、部署、监控和维护等方面的复杂性。
+2. **服务间通信开销**：微服务之间通过网络进行通信，传递数据需要额外的网络开销和序列化开销，可能导致性能瓶颈和增加系统延迟。
+3. **数据一致性和事务管理**：每个微服务都有自己的数据存储，数据一致性和跨服务的事务管理变得更加复杂，需要额外解决分布式事务和数据同步的问题。
+4. **部署和运维复杂性**：微服务架构涉及多个独立部署的服务，对于部署、监控和容错机制的要求更高，需要建立适当的部署管道和自动化工具，以简化部署和运维过程。
+5. **团队沟通和协作成本**：每个微服务都由专门的团队负责，可能增加团队之间的沟通和协作成本。需要有效的沟通渠道和协作机制，确保服务之间的协调和一致性。
+6. **服务治理和版本管理**：随着微服务数量的增加，服务的治理和版本管理变得更加复杂。需要考虑服务的注册发现、负载均衡、监控和故障处理等方面，以确保整个系统的可靠性和稳定性。
+7. **分布式系统的复杂性**：微服务架构涉及构建和管理分布式系统，而分布式系统本身具有一些固有的挑战，如网络延迟、分布式一致性和容错性。
+
+> 现有流行的微服务解决方案
+
+| 特点             | Dubbo                  | Spring Cloud Netflix         | Spring Cloud Alibaba             |
+| ---------------- | ---------------------- | ---------------------------- | -------------------------------- |
+| 开发语言         | Java                   | Java                         | Java                             |
+| 服务治理         | 提供完整的服务治理功能 | 提供部分服务治理功能         | 提供完整的服务治理功能           |
+| 服务注册与发现   | ZooKeeper/Nacos        | Eureka/Consul                | Nacos                            |
+| 负载均衡         | 自带负载均衡策略       | Ribbon                       | Ribbon\Dubbo负载均衡策略         |
+| 服务调用         | RPC方式                | RestTemplate/Feign           | Feign/RestTemplate/Dubbo         |
+| 熔断器           | Sentinel               | Hystrix                      | Sentinel/Resilience4j            |
+| 配置中心         | Apollo                 | Spring Cloud Config          | Nacos Config                     |
+| API网关          | Higress/APISIX         | Zuul/Gateway                 | Spring Cloud Gateway             |
+| 分布式事务       | Seata                  | 不支持分布式事务             | Seata                            |
+| 限流和降级       | Sentinel               | Hystrix                      | Sentinel                         |
+| 分布式追踪和监控 | Skywalking             | Spring Cloud Sleuth + Zipkin | SkyWalking或Sentinel Dashboard   |
+| 微服务网格       | Dubbo Mesh             | 不支持微服务网格             | Service Mesh（Nacos+Dubbo Mesh） |
+| 社区活跃度       | 相对较高               | 目前较低                     | 相对较高                         |
+| 孵化和成熟度     | 孵化较早，成熟度较高   | 成熟度较高                   | 孵化较新，但迅速发展             |
+
+> 微服务的各个组件和常见实现：
+
+1. **注册中心**：用于服务的注册与发现，管理微服务的地址信息。常见的实现包括：
+
+- `Spring Cloud Netflix`：Eureka、Consul
+- `Spring Cloud Alibaba`：Nacos
+
+2. **配置中心**：用于集中管理微服务的配置信息，可以动态修改配置而不需要重启服务。常见的实现包括：
+
+- `Spring Cloud Netflix`：Spring Cloud Config
+- `Spring Cloud Alibaba`：Nacos Config
+
+3. **远程调用**：用于在不同的微服务之间进行通信和协作。常见的实现保包括：
+
+- `RESTful API`：如RestTemplate、Feign
+- `RPC`（远程过程调用）：如Dubbo、gRPC
+
+4. **API网关**：作为微服务架构的入口，统一暴露服务，并提供路由、负载均衡、安全认证等功能。常见的实现包括：
+
+- `Spring Cloud Netflix`：Zuul、Gateway
+- `Spring Cloud Alibaba`：Gateway、Apisix等
+
+5. **分布式事务**：保证跨多个微服务的一致性和原子性操作。常见的实现包括：
+
+- `Spring Cloud Alibaba`：Seata
+
+6. **熔断器**：用于防止微服务之间的故障扩散，提高系统的容错能力。常见的实现包括：
+
+- `Spring Cloud Netflix`：Hystrix
+- `Spring Cloud Alibaba`：Sentinel、Resilience4j
+
+7. **限流和降级**：用于防止微服务过载，对请求进行限制和降级处理。常见的实现包括：
+
+- `Spring Cloud Netflix`：Hystrix
+- `Spring Cloud Alibaba`：Sentinel
+
+8. **分布式追踪和监控**：用于跟踪和监控微服务的请求流程和性能指标。常见的实现包括：
+
+- `Spring Cloud Netflix`：Spring Cloud Sleuth + Zipkin
+- `Spring Cloud Alibaba`：SkyWalking、Sentinel Dashboard
+
+## 注册中心
+
+注册中心是用来管理和维护分布式系统中各个服务的地址和元数据的组件。它主要用于实现`服务发现`和`服务注册`功能。
+
+1. **服务注册**：各个服务在启动时向注册中心注册自己的网络地址、服务实例信息和其他相关元数据。这样，其他服务就可以通过注册中心获取到当前可用的服务列表。
+2. **服务发现**：客户端通过向注册中心查询特定服务的注册信息，获得可用的服务实例列表。这样客户端就可以根据需要选择合适的服务进行调用，实现了服务间的解耦。
+3. **负载均衡**：注册中心可以对同一服务的多个实例进行负载均衡，将请求分发到不同的实例上，提高整体的系统性能和可用性。
+4. **故障恢复**：注册中心能够监测和检测服务的状态，当服务实例发生故障或下线时，可以及时更新注册信息，从而保证服务能够正常工作。
+5. **服务治理**：通过注册中心可以进行服务的配置管理、动态扩缩容、服务路由、灰度发布等操作，实现对服务的动态管理和控制。
+
+> `SpringCloud`可以与多种注册中心进行集成，常见的注册中心包括：
+
+1. Eureka：Eureka 是 Netflix 开源的服务发现框架，具有高可用、弹性、可扩展等特点，并与 Spring Cloud 集成良好。
+2. Consul：Consul 是一种分布式服务发现和配置管理系统，由 HashiCorp 开发。它提供了服务注册、服务发现、健康检查、键值存储等功能，并支持多数据中心部署。
+3. ZooKeeper：ZooKeeper 是 Apache 基金会开源的分布式协调服务，可以用作服务注册中心。它具有高可用、一致性、可靠性等特点。
+4. Nacos：Nacos 是阿里巴巴开源的一个动态服务发现、配置管理和服务管理平台。它提供了服务注册和发现、配置管理、动态 DNS 服务等功能。
+5. etcd：etcd 是 CoreOS 开源的一种分布式键值存储系统，可以被用作服务注册中心。它具有高可用、强一致性、分布式复制等特性。
+
+| 特性     | Eureka                           | ZooKeeper                          | Nacos                              |
+| -------- | -------------------------------- | ---------------------------------- | ---------------------------------- |
+| 开发公司 | Netflix                          | Apache 基金会                      | 阿里巴巴                           |
+| CAP      | AP（可用性和分区容忍性）         | CP（一致性和分区容忍性）           | 既支持AP，也支持CP                 |
+| 功能     | 服务注册与发现                   | 分布式协调、配置管理、分布式锁     | 服务注册与发现、配置管理、服务管理 |
+| 定位     | 适用于构建基于 HTTP 的微服务架构 | 通用的分布式协调服务框架           | 适用于微服务和云原生应用           |
+| 访问协议 | HTTP                             | TCP                                | HTTP/DNS                           |
+| 自我保护 | 支持                             | -                                  | 支持                               |
+| 数据存储 | 内嵌数据库、多个实例形成集群     | ACID 特性的分布式文件系统 ZAB 协议 | 内嵌数据库、MySQL 等               |
+| 健康检查 | Client Beat                      | Keep Alive                         | TCP/HTTP/MYSQL/Client Beat         |
+| 特点     | 简单易用、自我保护机制           | 高性能、强一致性                   | 动态配置管理、流量管理、灰度发布等 |
+
+## 配置中心
+
+微服务架构中的每个服务通常都需要一些配置信息，例如数据库连接地址、服务端口、日志级别等。这些配置可能因为不同环境、不同部署实例或者动态运行时需要进行调整和管理。
+
+微服务的实例一般非常多，如果每个实例都需要一个个地去做这些配置，那么运维成本将会非常大，这时候就需要一个集中化的配置中心，去管理这些配置。
+
+和注册中心一样，`SpringCloud`也支持对多种配置中心的集成。常见的配置中心选型包括：
+
+1. Spring Cloud Config：官方推荐的配置中心，支持将配置文件存储在Git、SVN等版本控制系统中，并提供RESTful API进行访问和管理。
+2. `ZooKeeper`：一个开源的分布式协调服务，可以用作配置中心。它具有高可用性、一致性和通知机制等特性。
+3. Consul：另一个开源的分布式服务发现和配置管理工具，也可用作配置中心。支持多种配置文件格式，提供健康检查、故障转移和动态变更等功能。
+4. Etcd：一个分布式键值存储系统，可用作配置中心。它使用基于Raft算法的一致性机制，提供分布式数据一致性保证。
+5. Apollo：携程开源的配置中心，支持多种语言和框架。提供细粒度的配置权限管理、配置变更通知和灰度发布等高级特性，还有可视化的配置管理界面。
+6. `Nacos`：阿里巴巴开源的服务发现、配置管理和服务管理平台，也可以作为配置中心使用。支持服务注册与发现、动态配置管理、服务健康监测和动态DNS服务等功能
+
+## 远程调用
+
+> HTTP和RPC的区别
+
+严格来讲，HTTP和不是一个层面的东西：可以说RPC包含HTTP，也可以说RPC在HTTP之上
+
+- HTTP（Hypertext Transfer Protocol）是一种应用层协议，主要强调的是网络通信；
+- RPC（Remote Procedure Call，远程过程调用）是一种用于分布式系统之间通信的协议，强调的是服务之间的远程调用。
+
+在微服务体系里，基于HTTP风格的远程调用通常使用框架如Feign来实现，基于RPC的远程调用通常使用框架如Dubbo来实现。
+
+|          | HTTP                                                         | RPC                                                          |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 定义     | HTTP（超文本传输协议）是一种用于传输超文本的协议             | RPC（远程过程调用）是一种用于实现分布式系统中不同节点之间通信的协议。 |
+| 通信方式 | 基于请求-响应模型，客户端发送请求，服务器返回响应。          | 基于方法调用模型，客户端调用远程方法并等待结果。             |
+| 传输协议 | 基于TCP协议，可使用其他传输层协议如TLS/SSL进行安全加密。     | 可以使用多种传输协议，如TCP、UDP等。                         |
+| 数据格式 | 基于文本，常用的数据格式有JSON、XML等。                      | 可以使用各种数据格式，如二进制、JSON、Protocol Buffers等。   |
+| 接口定义 | 使用RESTful风格的接口进行定义，常用的方法有GET、POST、PUT、DELETE等。 | 使用IDL（接口定义语言）进行接口定义，如Protocol Buffers、Thrift等。 |
+| 跨语言性 | 支持跨语言通信，可以使用HTTP作为通信协议实现不同语言之间的通信。 | 支持跨语言通信，可以使用IDL生成不同语言的客户端和服务端代码。 |
+| 灵活性   | 更加灵活，适用于不同类型的应用场景，如Web开发、API调用等。   | 更加高效，适用于需要高性能和低延迟的分布式系统。             |
+
+> Feign和Dubbo
+
+|          | Feign                                                        | Dubbo                                                        |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 定义     | Feign是一个声明式的Web服务客户端，用于简化HTTP API的调用。   | Dubbo是一个分布式服务框架，用于构建面向服务的微服务架构。    |
+| 通信方式 | 基于HTTP协议，使用RESTful风格的接口进行定义和调用。          | 基于RPC协议，支持多种序列化协议如gRPC、Hessian等。           |
+| 服务发现 | 通常结合服务注册中心（如Eureka、Consul）进行服务发现和负载均衡。 | 通过ZooKeeper、Nacos等进行服务注册和发现，并提供负载均衡功能。 |
+| 服务治理 | 不直接提供服务治理功能，需要结合其他组件或框架进行服务治理。 | 提供服务注册与发现、负载均衡、容错机制、服务降级等服务治理功能。 |
+| 跨语言性 | 支持跨语言通信，可以使用HTTP作为通信协议实现不同语言之间的通信。 | 支持跨语言通信，通过Dubbo的IDL生成不同语言的客户端和服务端代码。 |
+| 生态系统 | 集成了Spring Cloud生态系统，与Spring Boot无缝集成。          | 拥有完整的生态系统，包括注册中心、配置中心、监控中心等组件。 |
+| 适用场景 | 适用于构建RESTful风格的微服务架构，特别适合基于HTTP的微服务调用。 | 适用于构建面向服务的微服务架构，提供更全面的服务治理和容错机制。 |
+
+> Feign
+
+Feign是一个声明式的Web服务客户端，它简化了使用基于HTTP的远程服务的开发。
+
+Feign是在`RestTemplate` 和 `Ribbon`的基础上进一步封装，使用`RestTemplate`实现`Http`调用，使用Ribbon实现负载均衡。
+
+Feign的主要特点和功能包括：
+
+1. 声明式 API： Feign允许开发者使用简单的注解来定义和描述对远程服务的访问。通过使用注解，开发者可以轻松地指定URL、HTTP方法、请求参数、请求头等信息，使得远程调用变得非常直观和易于理解。
+
+```java
+@FeignClient(name = "example", url = "https://api.example.com") 
+public interface ExampleService { 
+    @GetMapping("/endpoint") 
+    String getEndpointData(); 
+}
+```
+
+2. 集成负载均衡：Feign集成了Ribbon负载均衡器，可以自动实现客户端的负载均衡。它可以根据服务名和可用实例进行动态路由，并分发请求到不同的服务实例上，提高系统的可用性和可伸缩性。
+
+3. 容错机制：Feign支持集成`Hystrix`容错框架，可以在调用远程服务时提供容错和断路器功能。当远程服务不可用或响应时间过长时，Feign可以快速失败并返回预设的响应结果，避免对整个系统造成级联故障。
+
+
+
 # Maven
 
 ## 分模块设计与开发
@@ -3147,5 +3481,283 @@ public interface InvocationHandler {
 
 # 面试经典问题
 
-> 1、动态代理的实现方式：`JDK`动态代理和`CGLIB`动态代理？
+## **1、动态代理的实现方式**
 
+代理模式：**使用代理对象来代替对真实对象(real object)的访问，这样就可以在不修改原目标对象的前提下，提供额外的功能操作，扩展目标对象的功能。**主要作用是扩展目标对象的功能，比如说在目标对象的某个方法执行前后你可以增加一些自定义的操作。
+
+### JDK动态代理
+
+> 在 Java 动态代理机制中 `InvocationHandler` 接口和 `Proxy` 类是核心。
+>
+> `Proxy` 类中使用频率最高的方法是：`newProxyInstance()` ，这个方法主要用来生成一个代理对象。
+>
+> ```java
+> public static Object newProxyInstance(ClassLoader loader,
+>                                       Class<?>[] interfaces,
+>                                       InvocationHandler h)
+>     throws IllegalArgumentException
+> {
+>     ......
+> }
+> ```
+>
+> 这个方法一共有 3 个参数：
+>
+> 1. **loader**:类加载器，用于加载代理对象。
+> 2. **interfaces**: 被代理类实现的一些接口；
+> 3. **h** : 实现了 `InvocationHandler` 接口的对象；
+>
+> 要实现动态代理的话，还必须需要实现`InvocationHandler` 来自定义处理逻辑。 当我们的动态代理对象调用一个方法时，这个方法的调用就会被转发到实现`InvocationHandler` 接口类的 `invoke` 方法来调用。
+>
+> ```java
+> public interface InvocationHandler {
+> 
+>     /**
+>      * 当你使用代理对象调用方法的时候实际会调用到这个方法
+>      */
+>     public Object invoke(Object proxy, Method method, Object[] args)
+>         throws Throwable;
+> }
+> ```
+>
+> `invoke()` 方法有下面三个参数：
+>
+> 1. **proxy** :动态生成的代理类
+> 2. **method** : 与代理类对象调用的方法相对应
+> 3. **args** : 当前 method 方法的参数
+>
+> 也就是说：**你通过`Proxy` 类的 `newProxyInstance()` 创建的代理对象在调用方法的时候，实际会调用到实现`InvocationHandler` 接口的类的 `invoke()`方法。** 你可以在 `invoke()` 方法中自定义处理逻辑，比如在方法执行前后做什么事情。
+>
+> 
+>
+>  **JDK 动态代理类使用步骤**
+>
+> 1. 定义一个接口及其实现类；
+> 2. 自定义 `InvocationHandler` 并重写`invoke`方法，在 `invoke` 方法中我们会调用原生方法（被代理类的方法）并自定义一些处理逻辑；
+> 3. 通过 `Proxy.newProxyInstance(ClassLoader loader,Class<?>[] interfaces,InvocationHandler h)` 方法创建代理对象；
+>
+> **代码示例**
+>
+> 这样说可能会有点空洞和难以理解，我上个例子，大家感受一下吧！
+>
+> **1.定义发送短信的接口**
+>
+> ```java
+> public interface SmsService {
+>     String send(String message);
+> }
+> ```
+>
+> **2.实现发送短信的接口**
+>
+> ```java
+> public class SmsServiceImpl implements SmsService {
+>     public String send(String message) {
+>         System.out.println("send message:" + message);
+>         return message;
+>     }
+> }
+> ```
+>
+> **3.定义一个 JDK 动态代理类**
+>
+> ```java
+> import java.lang.reflect.InvocationHandler;
+> import java.lang.reflect.InvocationTargetException;
+> import java.lang.reflect.Method;
+> 
+> /**
+>  * @author shuang.kou
+>  * @createTime 2020年05月11日 11:23:00
+>  */
+> public class DebugInvocationHandler implements InvocationHandler {
+>     /**
+>      * 代理类中的真实对象
+>      */
+>     private final Object target;
+> 
+>     public DebugInvocationHandler(Object target) {
+>         this.target = target;
+>     }
+> 
+>     @Override
+>     public Object invoke(Object proxy, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+>         //调用方法之前，我们可以添加自己的操作
+>         System.out.println("before method " + method.getName());
+>         Object result = method.invoke(target, args);
+>         //调用方法之后，我们同样可以添加自己的操作
+>         System.out.println("after method " + method.getName());
+>         return result;
+>     }
+> }
+> ```
+>
+> `invoke()` 方法: 当我们的动态代理对象调用原生方法的时候，最终实际上调用到的是 `invoke()` 方法，然后 `invoke()` 方法代替我们去调用了被代理对象的原生方法。
+>
+> **4.获取代理对象的工厂类**
+>
+> ```java
+> public class JdkProxyFactory {
+>     public static Object getProxy(Object target) {
+>         return Proxy.newProxyInstance(
+>                 target.getClass().getClassLoader(), // 目标类的类加载器
+>                 target.getClass().getInterfaces(),  // 代理需要实现的接口，可指定多个
+>                 new DebugInvocationHandler(target)   // 代理对象对应的自定义 InvocationHandler
+>         );
+>     }
+> }
+> ```
+>
+> `getProxy()`：主要通过`Proxy.newProxyInstance（）`方法获取某个类的代理对象
+>
+> **5.实际使用**
+>
+> ```java
+> SmsService smsService = (SmsService) JdkProxyFactory.getProxy(new SmsServiceImpl());
+> smsService.send("java");
+> ```
+>
+> 运行上述代码之后，控制台打印出：
+>
+> ```java
+> before method send
+> send message:java
+> after method send
+> ```
+
+### CGLib动态代理
+
+> **JDK 动态代理有一个最致命的问题是其只能代理实现了接口的类。**
+>
+> **为了解决这个问题，我们可以用 CGLIB 动态代理机制来避免。**
+>
+> [CGLIB](https://github.com/cglib/cglib)(*Code Generation Library*)是一个基于[ASM](http://www.baeldung.com/java-asm)的字节码生成库，它允许我们在运行时对字节码进行修改和动态生成。CGLIB 通过继承方式实现代理。很多知名的开源框架都使用到了[CGLIB](https://github.com/cglib/cglib)， 例如 Spring 中的 AOP 模块中：如果目标对象实现了接口，则默认采用 JDK 动态代理，否则采用 CGLIB 动态代理。
+>
+> **在 CGLIB 动态代理机制中 `MethodInterceptor` 接口和 `Enhancer` 类是核心。**
+>
+> 你需要自定义 `MethodInterceptor` 并重写 `intercept` 方法，`intercept` 用于拦截增强被代理类的方法。
+>
+> ```java
+> public interface MethodInterceptor extends Callback{
+>     // 拦截被代理类中的方法
+>     public Object intercept(Object obj, java.lang.reflect.Method method, Object[] args,MethodProxy proxy) throws Throwable;
+> }
+> ```
+>
+> 1. **obj** : 被代理的对象（需要增强的对象）
+> 2. **method** : 被拦截的方法（需要增强的方法）
+> 3. **args** : 方法入参
+> 4. **proxy** : 用于调用原始方法
+>
+> 你可以通过 `Enhancer`类来动态获取被代理类，当代理类调用方法的时候，实际调用的是 `MethodInterceptor` 中的 `intercept` 方法。
+>
+> **CGLIB 动态代理类使用步骤**
+>
+> 1. 定义一个类；
+> 2. 自定义 `MethodInterceptor` 并重写 `intercept` 方法，`intercept` 用于拦截增强被代理类的方法，和 JDK 动态代理中的 `invoke` 方法类似；
+> 3. 通过 `Enhancer` 类的 `create()`创建代理类；
+>
+> **代码示例**
+>
+> 不同于 JDK 动态代理不需要额外的依赖。[CGLIB](https://github.com/cglib/cglib)(*Code Generation Library*) 实际是属于一个开源项目，如果你要使用它的话，需要手动添加相关依赖。
+>
+> ```xml
+> <dependency>
+>   <groupId>cglib</groupId>
+>   <artifactId>cglib</artifactId>
+>   <version>3.3.0</version>
+> </dependency>
+> ```
+>
+> **1.实现一个使用阿里云发送短信的类**
+>
+> ```java
+> package github.javaguide.dynamicProxy.cglibDynamicProxy;
+> 
+> public class AliSmsService {
+>     public String send(String message) {
+>         System.out.println("send message:" + message);
+>         return message;
+>     }
+> }
+> ```
+>
+> **2.自定义 `MethodInterceptor`（方法拦截器）**
+>
+> ```java
+> import net.sf.cglib.proxy.MethodInterceptor;
+> import net.sf.cglib.proxy.MethodProxy;
+> 
+> import java.lang.reflect.Method;
+> 
+> /**
+>  * 自定义MethodInterceptor
+>  */
+> public class DebugMethodInterceptor implements MethodInterceptor {
+> 
+> 
+>     /**
+>      * @param o           被代理的对象（需要增强的对象）
+>      * @param method      被拦截的方法（需要增强的方法）
+>      * @param args        方法入参
+>      * @param methodProxy 用于调用原始方法
+>      */
+>     @Override
+>     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+>         //调用方法之前，我们可以添加自己的操作
+>         System.out.println("before method " + method.getName());
+>         Object object = methodProxy.invokeSuper(o, args);
+>         //调用方法之后，我们同样可以添加自己的操作
+>         System.out.println("after method " + method.getName());
+>         return object;
+>     }
+> 
+> }
+> ```
+>
+> **3.获取代理类**
+>
+> ```java
+> import net.sf.cglib.proxy.Enhancer;
+> 
+> public class CglibProxyFactory {
+> 
+>     public static Object getProxy(Class<?> clazz) {
+>         // 创建动态代理增强类
+>         Enhancer enhancer = new Enhancer();
+>         // 设置类加载器
+>         enhancer.setClassLoader(clazz.getClassLoader());
+>         // 设置被代理类
+>         enhancer.setSuperclass(clazz);
+>         // 设置方法拦截器
+>         enhancer.setCallback(new DebugMethodInterceptor());
+>         // 创建代理类
+>         return enhancer.create();
+>     }
+> }
+> ```
+>
+> **4.实际使用**
+>
+> ```java
+> AliSmsService aliSmsService = (AliSmsService) CglibProxyFactory.getProxy(AliSmsService.class);
+> aliSmsService.send("java");
+> ```
+>
+> 运行上述代码之后，控制台打印出：
+>
+> ```java
+> before method send
+> send message:java
+> after method send
+> ```
+
+###  **JDK 动态代理和 CGLIB 动态代理对比**
+
+1. **JDK 动态代理只能代理实现了接口的类或者直接代理接口，而 CGLIB 可以代理未实现任何接口的类。** 另外， CGLIB 动态代理是通过生成一个被代理类的子类来拦截被代理类的方法调用，因此不能代理声明为 final 类型的类和方法。
+2. 就二者的效率来说，大部分情况都是 JDK 动态代理更优秀，随着 JDK 版本的升级，这个优势更加明显。
+
+### **静态代理和动态代理的对比**
+
+1. **灵活性**：动态代理更加灵活，不需要必须实现接口，可以直接代理实现类，并且可以不需要针对每个目标类都创建一个代理类。另外，静态代理中，接口一旦新增加方法，目标对象和代理对象都要进行修改，这是非常麻烦的！
+2. **JVM 层面**：静态代理在编译时就将接口、实现类、代理类这些都变成了一个个实际的 class 文件。而动态代理是在运行时动态生成类字节码，并加载到 JVM 中的。
