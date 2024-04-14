@@ -216,3 +216,72 @@ Redis 是用 C 语言写的，但是对于Redis的字符串，却不是 C 语言
 - `zltail`字段的类型是`uint32_t`, 它指的是`ziplist`中最后一个entry的偏移量. 用于快速定位最后一个entry, 以快速完成pop等操作
 - `zllen`字段的类型是uint16_t, 它指的是整个ziplit中entry的数量. 这个值只占2bytes（16位）: 如果ziplist中entry的数目小于65535(2的16次方), 那么该字段中存储的就是实际entry的值. 若等于或超过65535, 那么该字段的值固定为65535, 但实际数量需要一个个entry的去遍历所有entry才能得到.
 - `zlend`是一个终止字节, 其值为全F, 即0xff. ziplist保证任何情况下, 一个entry的首字节都不会是255
+
+# Redis应用
+
+## Redis缓存读写策略
+
+缓存常用的3中读写策略
+
+- Cache Aside Pattern(旁路缓存模式)
+- Read/Write Through Pattern(读写穿透)
+- Write Behind Pattern(异步缓存写入)
+
+### **1、Cache Aside Pattern(旁路缓存模式)**
+
+适用范围：**适合读请求比较多的场景。**
+
+写策略：
+
+- 先更新DB
+- 然后直接删除Cache
+
+读策略
+
+- 从cache中读取数据，读取到直接返回
+- cache读取不到的话，就从db中读取数据返回
+- 再把数据添加到cache中
+
+缺陷：
+
+- **首次请求数据一定不在 cache 的问题**
+  - 可以将热点数据可以提前放入 cache 中。
+- **写操作比较频繁的话导致 cache 中的数据会被频繁被删除，这样会影响缓存命中率 。**
+  - 数据库和缓存数据强一致场景：更新 db 的时候同样更新 cache，不过我们需要加一个锁/分布式锁来保证更新 cache 的时候不存在线程安全问题。
+  - 可以短暂地允许数据库和缓存数据不一致的场景：更新 db 的时候同样更新 cache，但是给缓存加一个比较短的过期时间，这样的话就可以保证即使数据不一致的话影响也比较小。
+
+> 问题：
+>
+> 1. **在写数据的过程中，可以先删除 cache ，后更新 db 么？**
+>
+> 答：不行，这样会造成数据库和缓存数据不一致的问题；
+>
+> 举例：请求 1 先把 cache 中的 A 数据删除 -> 请求 2 从 db 中读取数据->请求 1 再把 db 中的 A 数据更新
+>
+> 1. **在写数据的过程中，先更新 db，后删除 cache 就没有问题了么？**
+>
+> 答：理论上来说还是可能会出现数据不一致性的问题，不过概率非常小，因为缓存的写入速度是比数据库的写入速度快很多。
+
+### **2、Read/Write Through Pattern(读写穿透)**
+
+Read/Write Through Pattern 中服务端把 cache 视为主要数据存储，从中读取数据并将数据写入其中。cache 服务负责将此数据读取和写入 db，从而减轻了应用程序的职责。
+
+**写（Write Through）：**
+
+- 先查 cache，cache 中不存在，直接更新 db。
+- cache 中存在，则先更新 cache，然后 cache 服务自己更新 db（**同步更新 cache 和 db**）。
+
+**读(Read Through)：**
+
+- 从 cache 中读取数据，读取到就直接返回 。
+- 读取不到的话，先从 db 加载，写入到 cache 后返回响应。
+
+Read-Through Pattern 实际只是在 Cache-Aside Pattern 之上进行了封装。在 Cache-Aside Pattern 下，发生读请求的时候，如果 cache 中不存在对应的数据，是由客户端自己负责把数据写入 cache，而 Read Through Pattern 则是 cache 服务自己来写入缓存的，这对客户端是透明的。
+
+和 Cache Aside Pattern 一样， Read-Through Pattern 也有首次请求数据一定不再 cache 的问题，对于热点数据可以提前放入缓存中。
+
+### **3、Write Behind Pattern(异步缓存写入)**
+
+Write Behind Pattern 和 Read/Write Through Pattern 很相似，两者都是由 cache 服务来负责 cache 和 db 的读写。
+
+但是，两个又有很大的不同：**Read/Write Through 是同步更新 cache 和 db，而 Write Behind 则是只更新缓存，不直接更新 db，而是改为异步批量的方式来更新 db**。

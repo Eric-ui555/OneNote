@@ -169,7 +169,7 @@
 
 # Java SE
 
-## **请说说多态、重载和重写**
+## **多态**
 
 > 多态允许不同类的对象对同一消息做出响应，但表现出不同的行为（即方法的多样性）。
 >
@@ -377,7 +377,7 @@
 > }
 > ```
 >
-> #### 为什么重写 `quals` 时必须重写 `hashCode` ⽅法？
+> #### 为什么重写 `equals` 时必须重写 `hashCode` ⽅法？
 >
 > 维护 `equals()`和 `hashCode()`之间的一致性是至关重要的，因为基于哈希的集合类（如 `HashSet`、`HashMap`、`Hashtable` 等）依赖于这一点来正确存储和检索对象。
 >
@@ -718,25 +718,25 @@
 > public final class ServiceLoader<S> implements Iterable<S>{ xxx...}
 > 
 > public static <S> ServiceLoader<S> load(Class<S> service) {
->     ClassLoader cl = Thread.currentThread().getContextClassLoader();
->     return ServiceLoader.load(service, cl);
+>        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+>        return ServiceLoader.load(service, cl);
 > }
 > 
 > public static <S> ServiceLoader<S> load(Class<S> service,
->                                         ClassLoader loader) {
->     return new ServiceLoader<>(service, loader);
+>                                            ClassLoader loader) {
+>        return new ServiceLoader<>(service, loader);
 > }
 > 
 > private ServiceLoader(Class<S> svc, ClassLoader cl) {
->     service = Objects.requireNonNull(svc, "Service interface cannot be null");
->     loader = (cl == null) ? ClassLoader.getSystemClassLoader() : cl;
->     acc = (System.getSecurityManager() != null) ? AccessController.getContext() : null;
->     reload();
+>        service = Objects.requireNonNull(svc, "Service interface cannot be null");
+>        loader = (cl == null) ? ClassLoader.getSystemClassLoader() : cl;
+>        acc = (System.getSecurityManager() != null) ? AccessController.getContext() : null;
+>        reload();
 > }
 > 
 > public void reload() {
->     providers.clear();
->     lookupIterator = new LazyIterator(service, loader);
+>        providers.clear();
+>        lookupIterator = new LazyIterator(service, loader);
 > }
 > ```
 >

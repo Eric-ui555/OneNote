@@ -733,7 +733,7 @@ public ListNode detectCycle(ListNode head) {
 
 **题目描述**
 
-给定一个含有 `n` ****个正整数的数组和一个正整数 `target` **。**
+给定一个含有 `n` 个正整数的数组和一个正整数 `target` **。**
 
 找出该数组中满足其总和大于等于 ****`target` ****的长度最小的 **连续子数组** `[numsl, numsl+1, ..., numsr-1, numsr]` ，并返回其长度**。**如果不存在符合条件的子数组，返回 `0` 。
 
@@ -804,6 +804,84 @@ public int minSubArrayLen(int target, int[] nums) {
 
 # 栈与队列
 
+## 32 最长有效括号
+
+[32. 最长有效括号](https://leetcode.cn/problems/longest-valid-parentheses/)
+
+题目描述：给你一个只包含 `'('` 和 `')'` 的字符串，找出最长有效（格式正确且连续）括号子串的长度。
+
+**示例 1：**
+
+```
+输入：s = "(()"
+输出：2
+解释：最长有效括号子串是 "()"
+```
+
+**示例 2：**
+
+```
+输入：s = ")()())"
+输出：4
+解释：最长有效括号子串是 "()()"
+```
+
+**示例 3：**
+
+```
+输入：s = ""
+输出：0
+```
+
+>  **提示：**
+>
+> - `0 <= s.length <= 3 * 104`
+> - `s[i]` 为 `'('` 或 `')'`
+
+**解题思路**
+
+- 基于栈判断括号是否有效
+  - 找出最长有效括号子串的长度：
+  - 始终保持栈底元素为当前已经遍历过的元素中「最后一个没有被匹配的右括号的下标」
+  - 对于遇到的每个 ‘(’ ，我们将它的下标放入栈中
+  - 对于遇到的每个 ‘)’ ，我们先弹出栈顶元素表示匹配了当前右括号：
+    - 如果栈为空，说明当前的右括号为没有被匹配的右括号，我们将其下标放入栈中来更新我们之前提到的「最后一个没有被匹配的右括号的下标」
+    - 如果栈不为空，当前右括号的下标减去栈顶元素即为「以该右括号为结尾的最长有效括号的长度」
+
+**参考代码**
+
+```java
+class Solution {
+    public int longestValidParentheses(String s) {
+        int maxans = 0;
+        Deque<Integer> stack = new LinkedList<Integer>();
+        // 栈底元素为当前已经遍历过的元素中「最后一个没有被匹配的右括号的下标」
+        stack.push(-1);
+        for (int i = 0; i < s.length(); i++) {
+            // 对于遇到的每个 ‘(’ ，我们将它的下标放入栈中
+            if (s.charAt(i) == '(') {
+                stack.push(i);
+            } 
+            else { 
+                // 对于遇到的每个 ‘)’ ，我们先弹出栈顶元素表示匹配了当前右括号：
+                stack.pop();
+                // 如果栈为空，说明当前的右括号为没有被匹配的右括号，
+                // 我们将其下标放入栈中来更新我们之前提到的「最后一个没有被匹配的右括号的下标」
+                if (stack.isEmpty()) {
+                    stack.push(i);
+                } else {
+                    // 如果栈不为空，当前右括号的下标减去栈顶元素即为「以该右括号为结尾的最长有效括号的长度」
+                    maxans = Math.max(maxans, i - stack.peek());
+                }
+            }
+        }
+        return maxans;
+    }
+}
+```
+
+
+
 ## 239 滑动窗口的最大值
 
 [239. 滑动窗口最大值 - 力扣（LeetCode）](https://leetcode.cn/problems/sliding-window-maximum/description/)
@@ -871,8 +949,8 @@ class MyQueue {
 }
 
 /**
-     * 解法一
-     */
+ * 解法一
+ */
 public int[] maxSlidingWindow(int[] nums, int k) {
     if (nums.length == 1) {
         return nums;
@@ -1792,6 +1870,7 @@ public class Solution {
 > 输出：3
 > 解释：
 > 从左上角开始，总共有 3 条路径可以到达右下角。
+>
 > 1. 向右 -> 向下 -> 向下
 > 2. 向下 -> 向下 -> 向右
 > 3. 向下 -> 向右 -> 向下
@@ -1933,6 +2012,7 @@ public int uniquePathsWithObstacles(int[][] obstacleGrid) {
 > 输出：[ [2,4], [3,4],[2,3],[1,2],[1,3], [1,4],]
 
 **解题思路**
+
 暴力解法：k个数就需要k层遍历
 
 回溯法：抽象树结构
