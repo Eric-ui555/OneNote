@@ -1,5 +1,52 @@
 # 数组
 
+## 1 两数之和
+
+[两数之和](https://leetcode.cn/problems/two-sum/)
+
+**题目描述**
+
+给定一个整数数组 `nums` 和一个整数目标值 `target`，请你在该数组中找出 **和为目标值** *`target`* 的那 **两个** 整数，并返回它们的数组下标。
+
+你可以假设每种输入只会对应一个答案。但是，数组中同一个元素在答案里不能重复出现。
+
+**示例**
+
+> 输入：nums = [2,7,11,15], target = 9
+> 输出：[0,1]
+> 解释：因为 nums[0] + nums[1] == 9 ，返回 [0, 1] 。
+
+**具体思路**
+
+1、暴力解法
+
+- 时间复杂度 O(n^2)
+
+2、利用 HashMap，空间换时间
+
+- 定义一个哈希表，键是数字元素，值是其对应的下标；
+
+- 遍历该数组，从该哈希表中寻找 target - num[i] 的值，若哈希表中存在该值，则返回，如不存在，则加入哈希表；
+- 时间复杂度 O(n)
+- 空间复杂度 O(n)
+
+**参考代码**
+
+```java
+public int[] twoSum(int[] nums, int target) {
+    HashMap<Integer, Integer> map = new HashMap<>();
+    for (int i = 0; i < nums.length; i++) {
+        int diff = target - nums[i];
+        if (map.containsKey(diff)) {
+            return new int[]{map.get(diff), i};
+        } else {
+            map.put(nums[i], i);
+        }
+    }
+    return new int[0];
+}
+```
+
 ## 121 买卖股票的最佳时机
 
 [121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/)
@@ -50,13 +97,221 @@ public int maxProfit(int prices[]) {
 }
 ```
 
-------
+## 56 合并区间
+
+[56. 合并区间](https://leetcode.cn/problems/merge-intervals/)
+
+**题目描述**
+
+以数组 `intervals` 表示若干个区间的集合，其中单个区间为 `intervals[i] = [starti, endi]` 。请你合并所有重叠的区间，并返回 *一个不重叠的区间数组，该数组需恰好覆盖输入中的所有区间* 。
+
+**示例**
+
+> 输入：intervals = [[1,3],[2,6],[8,10],[15,18]]
+> 输出：[[1,6],[8,10],[15,18]]
+> 解释：区间 [1,3] 和 [2,6] 重叠, 将它们合并为 [1,6].
+
+**解题思路**
+
+一、排序
+
+- 如果我们按照区间的左端点排序，那么在排完序的列表中，可以合并的区间一定是连续的。
+- 我们用数组 merged 存储最终的答案。
+  - 首先，我们将列表中的区间按照左端点升序排序。然后我们将第一个区间加入 merged 数组中，并按顺序依次考虑之后的每个区间：
+  - 如果当前区间的左端点在数组 merged 中最后一个区间的右端点之后，那么它们不会重合，我们可以直接将这个区间加入数组 merged 的末尾；
+  - 否则，它们重合，我们需要用当前区间的右端点更新数组 merged 中最后一个区间的右端点，将其置为二者的较大值。
+
+**参考代码**
+
+```java
+public int[][] merge(int[][] intervals) {
+    if (intervals.length == 0) return new int[0][2];
+    Arrays.sort(intervals, (o1, o2) -> o1[0] - o2[0]);
+    // 存储数组的数组
+    List<int[]> res = new ArrayList<int[]>();
+    for (int i = 0; i < intervals.length; ++i) {
+        int left = intervals[i][0];
+        int right = intervals[i][1];
+        if (res.isEmpty() || res.get(res.size() - 1)[1] < left) {
+            res.add(new int[]{left, right});
+        } else {
+            res.get(res.size() - 1)[1] = Math.max(res.get(res.size() - 1)[1], right);
+        }
+    }
+    return res.toArray(new int[res.size()][]);
+}
+```
+
+## 57 插入区间
+
+[57. 插入区间](https://leetcode.cn/problems/insert-interval/)
+
+**题目描述**
+
+给你一个 **无重叠的** *，*按照区间起始端点排序的区间列表 `intervals`，其中 `intervals[i] = [starti, endi]` 表示第 `i` 个区间的开始和结束，并且 `intervals` 按照 `starti` 升序排列。同样给定一个区间 `newInterval = [start, end]` 表示另一个区间的开始和结束。
+
+在 `intervals` 中插入区间 `newInterval`，使得 `intervals` 依然按照 `starti` 升序排列，且区间之间不重叠（如果有必要的话，可以合并区间）。
+
+返回插入之后的 `intervals`。
+
+**注意** 你不需要原地修改 `intervals`。你可以创建一个新数组然后返回它。
+
+**示例**
+
+> 输入：intervals = [[1,3],[6,9]], newInterval = [2,5]
+> 输出：[[1,5],[6,9]]
+
+**解题思路**
+
+- 将新数组与原数组合并，将其归类为上述合并区间的问题。
+
+**参考代码**
+
+```java
+class Solution {
+    public int[][] insert(int[][] intervals, int[] newInterval) {
+        int[][] newIntervals = new int[intervals.length + 1][];
+        // 复制 intervals 中的所有元素到 newIntervals
+        for (int i = 0; i < intervals.length; i++) {
+            newIntervals[i] = intervals[i];
+        }
+        newIntervals[newIntervals.length - 1] = newInterval;
+        Arrays.sort(newIntervals, (o1, o2) -> o1[0] - o2[0]);
+
+        // 存储数组的数组
+        List<int[]> res = new ArrayList<int[]>();
+        for (int[] interval : newIntervals) {
+            int left = interval[0];
+            int right = interval[1];
+
+            if (res.isEmpty() || res.get(res.size() - 1)[1] < left) {
+                res.add(interval);
+            } else {
+                res.get(res.size() - 1)[1] = Math.max(res.get(res.size() - 1)[1], right);
+            }
+        }
+        return res.toArray(new int[res.size()][]);
+    }
+}
+```
+
+
 
 ------
 
 # 字符串
 
-## 151.翻转字符串里的单词
+## 5 最长回文子串
+
+[5. 最长回文子串](https://leetcode.cn/problems/longest-palindromic-substring/)
+
+**题目描述**
+
+给你一个字符串 `s`，找到 `s` 中最长的回文子串。
+
+如果字符串的反序与原始字符串相同，则该字符串称为回文字符串。
+
+**示例**
+
+> 输入：s = "babad"
+> 输出："bab"
+> 解释："aba" 同样是符合题意的答案。
+
+**具体思路**
+
+暴力解法
+
+- 时间复杂度：O(n^3)
+- 空间复杂度：O(1)
+
+**动态规划**
+
+- 对于一个子串而言，如果它是回文串，并且长度大于 222，那么将它首尾的两个字母去除之后，它仍然是个回文串。
+
+- 状态转移方程：
+  $$
+  P(i,j)=P(i+1,j-1)交(S_i==S_j)
+  $$
+
+- 边界条件
+  - `P(i,i)=true;`
+  - `P(i,i+1)=(Si == Si+1)`
+- **注意：在状态转移方程中，我们是从长度较短的字符串向长度较长的字符串进行转移的，因此一定要注意动态规划的循环顺序。**
+
+**参考代码**
+
+```java
+public class Solution {
+    public String longestPalindrome(String s) {
+        int len = s.length();
+        if (len < 2) {
+            return s;
+        }
+        int maxLen = 1;
+        int begin = 0;
+        // dp[i][j] 表示 s[i..j] 是否是回文串
+        boolean[][] dp = new boolean[len][len];
+        // 初始化：所有长度为 1 的子串都是回文串
+        for (int i = 0; i < len; i++) {
+            dp[i][i] = true;
+        }
+
+        char[] charArray = s.toCharArray();
+        // 递推开始
+        // 先枚举子串长度
+        for (int L = 2; L <= len; L++) {
+            // 枚举左边界，左边界的上限设置可以宽松一些
+            for (int i = 0; i < len; i++) {
+                // 由 L 和 i 可以确定右边界，即 j - i + 1 = L 得
+                int j = L + i - 1;
+                // 如果右边界越界，就可以退出当前循环
+                if (j >= len) {
+                    break;
+                }
+
+                if (charArray[i] != charArray[j]) {
+                    dp[i][j] = false;
+                } else {
+                    if (j - i < 3) {
+                        dp[i][j] = true;
+                    } else {
+                        dp[i][j] = dp[i + 1][j - 1];
+                    }
+                }
+                // 只要 dp[i][L] == true 成立，就表示子串 s[i..L] 是回文，此时记录回文长度和起始位置
+                if (dp[i][j] && j - i + 1 > maxLen) {
+                    maxLen = j - i + 1;
+                    begin = i;
+                }
+            }
+        }
+        return s.substring(begin, begin + maxLen);
+    }
+}
+```
+
+```java
+public String longestPalindrome(String s) {
+    int len = s.length();
+    int left = 0, right = 0, res = 0;   // 记录左右边界和右-左的长度
+    boolean[][] dp = new boolean[len][len];
+    for (int i = len - 1; i >= 0; i--) {
+        for (int j = i; j < len; j++) { // j=i这步就将每个单个字符dp赋为了true
+            if (s.charAt(i) == s.charAt(j) && (j - i <= 1 || dp[i + 1][j - 1])) {// 如果j - i <= 1，必是回文串
+                dp[i][j] = true;
+                if (j - i > res) {
+                    res = j - i;        // res记得也得更新！
+                    left = i;
+                    right = j;
+                }
+            }
+        }
+    }
+    return s.substring(left, right + 1);// 左闭右开
+}
+```
+
+## 151 翻转字符串里的单词
 
 [151. 反转字符串中的单词](https://leetcode.cn/problems/reverse-words-in-a-string/)
 
@@ -177,7 +432,7 @@ public String reverseWords(String s) {
 }
 ```
 
-## 28. 找出字符串中第一个匹配项的下标
+## 28 找出字符串中第一个匹配项的下标
 
 [28. 找出字符串中第一个匹配项的下标](https://leetcode.cn/problems/find-the-index-of-the-first-occurrence-in-a-string/)
 
@@ -409,6 +664,57 @@ public class Multiply {
 
 # 双指针
 
+## 11 盛最多水的容器
+
+[11. 盛最多水的容器](https://leetcode.cn/problems/container-with-most-water/)
+
+**题目描述**
+
+给定一个长度为 `n` 的整数数组 `height` 。有 `n` 条垂线，第 `i` 条线的两个端点是 `(i, 0)` 和 `(i, height[i])` 。
+
+找出其中的两条线，使得它们与 `x` 轴共同构成的容器可以容纳最多的水。
+
+返回容器可以储存的最大水量。
+
+**说明：**你不能倾斜容器。
+
+**示例**
+
+> 输入：[1,8,6,2,5,4,8,3,7]
+> 输出：49 
+> 解释：图中垂直线代表输入数组 [1,8,6,2,5,4,8,3,7]。在此情况下，容器能够容纳水（表示为蓝色部分）的最大值为 49。
+
+**具体思路**
+
+双指针：
+
+- `S = min{h(i),h(j)} * (j-i)`
+- 初始：`i=0, j = nums.length - 1`
+- 每次记录最大水量，然后高度小的索引向内收缩
+
+**参考代码**
+
+```java
+public int maxArea(int[] height) {
+    // 双指针：最左最右
+    // S = min{h(i),h(j)} * (j-i)
+    int i = 0, j = height.length - 1;
+    int maxS = 0, temp;
+    while (i < j) {
+        temp = Math.min(height[i], height[j]) * (j - i);
+        if (maxS < temp)
+            maxS = temp;
+        // 高度小的向内收缩
+        if (height[i] < height[j]) {
+            i++;
+        } else {
+            j--;
+        }
+    }
+    return maxS;
+}
+```
+
 ## 15 三数之和
 
 [15. 三数之和](https://leetcode.cn/problems/3sum/)
@@ -434,11 +740,18 @@ public class Multiply {
 
 **双指针法**
 
-- 以nums数组为例，首先将数组排序，然后有一层for循环，i从下标0的地方开始，同时定一个下标left 定义在i+1的位置上，定义下标right 在数组结尾的位置上。
-- 依然还是在数组中找到 abc 使得a + b +c =0，我们这里相当于 a = nums[i]，b = nums[left]，c = nums[right]。
-- 如何移动left 和right呢， 如果nums[i] + nums[left] + nums[right] > 0 就说明 此时三数之和大了，因为数组是排序后了，所以right下标就应该向左移动，这样才能让三数之和小一些。
-- 如果 nums[i] + nums[left] + nums[right] < 0 说明此时 三数之和小了，left 就向右移动，才能让三数之和大一些，直到left与right相遇为止。
+- 特判，对于数组长度 n，如果数组为 null 或者数组长度小于 333，返回 [][][]。
+- 对数组进行排序。
+- 遍历排序后数组：
+  - 若 `nums[i]>0`：因为已经排序好，所以后面不可能有三个数加和等于 000，直接返回结果。
+  - 对于重复元素：跳过，避免出现重复解
+  - 令左指针 `L=i+1`，右指针 `R=n−1`，当 L<R 时，执行循环：
+    - 当 `nums[i]+nums[L]+nums[R]==0`，执行循环，判断左界和右界是否和下一位置重复，去除重复解。并同时将 L,R 移到下一位置，寻找新的解。
+    - 若和大于 0，说明 `nums[R]` 太大，R 左移；
+    - 若和小于 0，说明 `nums[L]` 太小，L 右移；
+
 - 时间复杂度：O(n^2)
+- 空间复杂度：O(1)
 
 **参考代码**
 
@@ -494,9 +807,7 @@ public List<List<Integer>> threeSum(int[] nums) {
 
 给你一个长度为 `n` 的整数数组 `nums` 和 一个目标值 `target`。请你从 `nums` 中选出三个整数，使它们的和与 `target` 最接近。
 
-返回这三个数的和。
-
-假定每组输入只存在恰好一个解。
+返回这三个数的和。假定每组输入只存在恰好一个解。
 
 **示例**
 
@@ -517,6 +828,7 @@ public List<List<Integer>> threeSum(int[] nums) {
 public int threeSumClosest(int[] nums, int target) {
     int n = nums.length;
     int closeSum = 10000000;
+    // 数组排序
     Arrays.sort(nums);
 
     for (int i = 0; i < n; i++) {
@@ -579,7 +891,7 @@ public int threeSumClosest(int[] nums, int target) {
 
 **解题思路**
 
-双指针：继续延续三树之和双指针策略，采用两次循环遍历
+**双指针：继续延续三树之和双指针策略，采用两次循环遍历**
 
 剪枝操作：提出重复值
 
@@ -725,9 +1037,160 @@ public ListNode detectCycle(ListNode head) {
 
 
 
+# 单调栈
+
+## 42 接雨水
+
+[42. 接雨水](https://leetcode.cn/problems/trapping-rain-water/)
+
+**题目描述**
+
+给定 `n` 个非负整数表示每个宽度为 `1` 的柱子的高度图，计算按此排列的柱子，下雨之后能接多少雨水。
+
+**示例**
+
+> ![img](leetcode题解.assets/rainwatertrap.png)
+>
+> 输入：height = [0,1,0,2,1,0,1,3,2,1,2,1]
+> 输出：6
+> 解释：上面是由数组 [0,1,0,2,1,0,1,3,2,1,2,1] 表示的高度图，在这种情况下，可以接 6 个单位的雨水（蓝色部分表示雨水）。 
+
+**具体思路**
+
+单调栈
+
+动态规划
+
+**参考代码**
+
+```java
+/**
+ * 单调栈
+ */
+public int trap(int[] height) {
+    int n = height.length;
+    Deque<Integer> stack = new ArrayDeque<>();
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+        while (!stack.isEmpty() && height[i] > height[stack.peek()]) {
+            int h = height[stack.peek()];      // 取出要出栈的元素
+            stack.pop();
+            if (stack.isEmpty()) {
+                break;
+            }
+            int dist = i - stack.peek() - 1;   // 两堵墙之间的距离
+            int min = Math.min(height[stack.peek()], height[i]);
+            sum += dist * (min - h);
+        }
+        stack.push(i);
+    }
+    return sum;
+}
+```
+
+```java
+public int trap(int[] height) {
+    int n = height.length;
+    if (n == 0) {
+        return 0;
+    }
+
+    int[] leftMax = new int[n];
+    leftMax[0] = height[0];
+    for (int i = 1; i < n; ++i) {
+        leftMax[i] = Math.max(leftMax[i - 1], height[i]);
+    }
+
+    int[] rightMax = new int[n];
+    rightMax[n - 1] = height[n - 1];
+    for (int i = n - 2; i >= 0; --i) {
+        rightMax[i] = Math.max(rightMax[i + 1], height[i]);
+    }
+
+    int ans = 0;
+    for (int i = 0; i < n; ++i) {
+        ans += Math.min(leftMax[i], rightMax[i]) - height[i];
+    }
+    return ans;
+}
+```
+
+
+
 # 滑动窗口
 
-## 209. 长度最小的子数组
+## 3 无重复字符的最长字串
+
+**题目描述**
+
+给定一个字符串 `s` ，请你找出其中不含有重复字符的 **最长子串** 的长度。
+
+**示例**
+
+> 输入: s = "abcabcbb"
+> 输出: 3 
+> 解释: 因为无重复字符的最长子串是 "abc"，所以其长度为 3。
+
+**解题思路**
+
+滑动窗口
+
+- 定义一个队列，不断移动队列即可；
+- 遇到队列中不存在的元素，则入队；
+- 遇到队列中存在的元素，则从队首开始出队，直到将重复的值出队；
+- 定义sum和max，用于记录队列的长度以及队列长度的最大值；
+
+**参考代码**
+
+```java
+/**
+ * 滑动窗口1
+ */
+public int lengthOfLongestSubstring(String s) {
+    if (s.length()==0) return 0;
+    HashMap<Character, Integer> map = new HashMap<Character, Integer>();
+    int max = 0;
+    int left = 0;
+    for(int i = 0; i < s.length(); i ++){
+        if(map.containsKey(s.charAt(i))){
+            left = Math.max(left,map.get(s.charAt(i)) + 1);
+        }
+        map.put(s.charAt(i),i);
+        max = Math.max(max,i-left+1);
+    }
+    return max;
+}
+```
+
+```java
+/**
+ * 滑动窗口2
+ */
+public int lengthOfLongestSubstring(String s) {
+    Queue<Character> queue = new LinkedList<>();
+    int max = 0;
+    int sum = 0;
+    for (int i = 0; i < s.length(); i++) {
+        Character ch = s.charAt(i);
+        if (queue.contains(ch)) {
+            while (queue.peek() != ch) {
+                queue.remove();
+                sum--;
+            }
+            queue.remove();
+            sum--;
+        }
+        queue.add(ch);
+        sum++;
+        max = Math.max(max, sum);
+    }
+    return max;
+}
+```
+
+
+
+## 209 长度最小的子数组
 
 [209. 长度最小的子数组](https://leetcode.cn/problems/minimum-size-subarray-sum/)
 
@@ -2712,3 +3175,28 @@ public int findDuplicate(int[] nums) {
 }
 ```
 
+# 拼多多
+
+
+
+
+
+
+
+![image-20240509201808536](leetcode题解.assets/image-20240509201808536.png)
+
+![image-20240509201817861](leetcode题解.assets/image-20240509201817861.png)
+
+![image-20240509201831965](leetcode题解.assets/image-20240509201831965.png)
+
+![image-20240509201839576](leetcode题解.assets/image-20240509201839576.png)
+
+![image-20240509201922612](leetcode题解.assets/image-20240509201922612.png)
+
+![image-20240509201930590](leetcode题解.assets/image-20240509201930590.png)
+
+![image-20240509201940187](leetcode题解.assets/image-20240509201940187.png)
+
+![image-20240509201952826](leetcode题解.assets/image-20240509201952826.png)
+
+![image-20240509202002452](leetcode题解.assets/image-20240509202002452.png)
